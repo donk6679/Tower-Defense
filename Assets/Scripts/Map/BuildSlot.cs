@@ -1,7 +1,9 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// 单个可建造地块：点击后由 BuildManager 尝试在此建造。
+/// 如果点击发生在 UI 上（如塔选择按钮），不会误触发建造。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
 public sealed class BuildSlot : MonoBehaviour
@@ -40,6 +42,10 @@ public sealed class BuildSlot : MonoBehaviour
     private void OnMouseDown()
     {
         if (!isBuildable)
+            return;
+
+        // 点击 UI 时不要往下面的地图建造
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             return;
 
         if (BuildManager.Instance != null)

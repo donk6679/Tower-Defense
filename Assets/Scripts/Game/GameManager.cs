@@ -2,24 +2,27 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 核心管理器：负责核心生命、金币与游戏状态。
-/// 敌人到达核心时扣生命；敌人被消灭时加金币。
+/// 核心管理器：负责金币、生命、游戏结束/胜利状态。
+/// UI 通过 GameEnded / GoldChanged / LivesChanged 事件更新。
 /// </summary>
 public sealed class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [Header("Core")]
+    [Header("Starting Values")]
     [SerializeField, Min(1)] private int startingLives = 20;
     [SerializeField, Min(0)] private int startingGold = 200;
 
     public int Lives { get; private set; }
     public int Gold { get; private set; }
+    public bool HasWon { get; private set; }
+
+    /// <summary>true 表示游戏已结束（无论胜利还是失败）。</summary>
     public bool IsGameOver { get; private set; }
 
     public event Action<int> LivesChanged;
     public event Action<int> GoldChanged;
-    public event Action GameOverOccurred;
+    public event Action<bool> GameEnded; // 参数：true=胜利, false=失败
 
     private void Awake()
     {
@@ -53,12 +56,21 @@ public sealed class GameManager : MonoBehaviour
         LivesChanged?.Invoke(Lives);
 
         if (Lives <= 0)
-            TriggerGameOver();
+            EndGame(false);
+    }
+
+    public void WinGame()
+    {
+        if (IsGameOver)
+            return;
+
+        HasWon = true;
+        EndGame(true);
     }
 
     public void AddGold(int amount)
     {
-        if (amount <= 0)
+        if (IsGameOver || amount <= 0)
             return;
 
         Gold += amount;
@@ -75,20 +87,12 @@ public sealed class GameManager : MonoBehaviour
         return true;
     }
 
-    private void TriggerGameOver()
+    private void EndGame(bool won)
     {
         IsGameOver = true;
-        Debug.Log("[Game] 游戏结束：核心生命归零");
-        GameOverOccurred?.Invoke();
-    }
+        HasWon = won;
 
-    // 临时调试 HUD，第 5 天做正式 UI 后会删除
-    private void OnGUI()
-    {
-        GUILayout.BeginArea(new Rect(10f, 10f, 260f, 70f));
-        GUILayout.Label("Gold: " + Gold + "   Lives: " + Lives);
-        if (IsGameOver)
-            GUILayout.Label("GAME OVER");
-        GUILayout.EndArea();
+        Debug.Log(won ? "[Game] 胜利！所有波次已被守住" : "[Game] 游戏结束：核心生命归零");
+        GameEnded?.Invoke(won);
     }
 }

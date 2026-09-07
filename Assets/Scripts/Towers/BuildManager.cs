@@ -2,8 +2,8 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 建造管理器：管理可选的塔类型、扣金币与放置炮塔。
-/// 当前用键盘数字键选塔、鼠标点击建造地块放置。
+/// 建造管理器：管理可选塔类型、选中状态、扣金币与放置炮塔。
+/// 数字键与底部 UI 按钮都可以选塔，随后点击浅绿色地块建造。
 /// </summary>
 public sealed class BuildManager : MonoBehaviour
 {
@@ -15,6 +15,12 @@ public sealed class BuildManager : MonoBehaviour
     private Transform towerParent;
 
     public bool HasSelection => selectedIndex >= 0 && selectedIndex < towerTypes.Length;
+    public int SelectedIndex => HasSelection ? selectedIndex : -1;
+    public TowerTypeConfig[] AvailableTowers => towerTypes;
+    public TowerTypeConfig SelectedTower => HasSelection ? towerTypes[selectedIndex] : null;
+
+    /// <summary>选中变化：-1 表示取消选择，否则为塔列表下标。</summary>
+    public event Action<int> SelectionChanged;
 
     private void Awake()
     {
@@ -60,13 +66,24 @@ public sealed class BuildManager : MonoBehaviour
             return;
         }
 
+        if (selectedIndex == index)
+        {
+            ClearSelection();
+            return;
+        }
+
         selectedIndex = index;
         Debug.Log("[Build] 选择 " + towerTypes[index].DisplayName + "，点击浅绿色地块建造", this);
+        SelectionChanged?.Invoke(index);
     }
 
     public void ClearSelection()
     {
+        if (selectedIndex == -1)
+            return;
+
         selectedIndex = -1;
+        SelectionChanged?.Invoke(-1);
     }
 
     public void TryBuild(BuildSlot slot)
@@ -74,9 +91,12 @@ public sealed class BuildManager : MonoBehaviour
         if (slot == null || !slot.isBuildable)
             return;
 
+        if (GameManager.Instance != null && GameManager.Instance.IsGameOver)
+            return;
+
         if (!HasSelection)
         {
-            Debug.Log("[Build] 请先按 1 选择机炮塔");
+            Debug.Log("[Build] 请先选择炮塔（UI 按钮或数字键 1/2/3）");
             return;
         }
 
@@ -130,25 +150,6 @@ public sealed class BuildManager : MonoBehaviour
         }
 
         return towers.transform;
-    }
-
-    // 临时选择面板，第 5 天做正式 UI 后会删除
-    private void OnGUI()
-    {
-        GUILayout.BeginArea(new Rect(10f, 90f, 380f, 110f));
-
-        for (int i = 0; i < towerTypes.Length; i++)
-        {
-            string selectedMark = i == selectedIndex ? "  [已选中]" : "";
-            GUILayout.Label("[" + (i + 1) + "] " + towerTypes[i].DisplayName +
-                            " - " + towerTypes[i].Cost + " 金币" + selectedMark);
-        }
-
-        GUILayout.Label(HasSelection
-            ? "左键点击浅绿色地块即可建造"
-            : "按 1 选择机炮塔，按 0/Esc 取消");
-
-        GUILayout.EndArea();
     }
 
     [Serializable]
