@@ -2,14 +2,13 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 波次管理器：自动按 WaveSettings 列表刷怪。
-/// 每一波内敌人全部消失后才会进入下一波；所有波次结束触发胜利日志。
+/// 波次管理器：按 WaveSettings 中的“敌人组”顺序刷怪。
+/// 一组刷完立刻刷下一组；整个波次的敌人全部消失后才进入下一波。
 /// </summary>
 public sealed class WaveManager : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private PathManager pathManager;
-    [SerializeField] private Enemy enemyPrefab;
 
     [Header("Wave Config")]
     [SerializeField] private WaveSettings[] waves = new WaveSettings[0];
@@ -22,13 +21,10 @@ public sealed class WaveManager : MonoBehaviour
     public int CurrentWaveNumber => currentWaveNumber;
     public bool AllWavesCleared { get; private set; }
 
-    public void Setup(PathManager path, Enemy prefab, WaveSettings[] waveConfigs)
+    public void Setup(PathManager path, WaveSettings[] waveConfigs)
     {
         pathManager = path;
-        enemyPrefab = prefab;
-
-        if (waveConfigs != null)
-            waves = waveConfigs;
+        waves = waveConfigs == null ? new WaveSettings[0] : waveConfigs;
     }
 
     private void Start()
@@ -36,9 +32,9 @@ public sealed class WaveManager : MonoBehaviour
         if (pathManager == null)
             pathManager = FindObjectOfType<PathManager>();
 
-        if (enemyPrefab == null || pathManager == null || waves == null || waves.Length == 0)
+        if (pathManager == null || waves == null || waves.Length == 0)
         {
-            Debug.LogWarning("[WaveManager] 缺少路径、敌人 Prefab 或波次配置，无法开始波次", this);
+            Debug.LogWarning("[WaveManager] 缺少路径或波次配置，无法开始波次", this);
             return;
         }
 
@@ -62,15 +58,22 @@ public sealed class WaveManager : MonoBehaviour
 
             Debug.Log("[Wave] 第 " + currentWaveNumber + " 波开始");
 
-            for (int spawned = 0; spawned < wave.EnemyCount; spawned++)
+            for (int groupIndex = 0; groupIndex < wave.Groups.Length; groupIndex++)
             {
-                if (IsGameOver())
-                    yield break;
+                EnemyGroup group = wave.Groups[groupIndex];
+                if (group == null || group.EnemyPrefab == null)
+                    continue;
 
-                SpawnEnemy(wave.EnemyHealth);
+                for (int spawned = 0; spawned < group.Count; spawned++)
+                {
+                    if (IsGameOver())
+                        yield break;
 
-                if (spawned < wave.EnemyCount - 1)
-                    yield return new WaitForSeconds(wave.SpawnInterval);
+                    SpawnEnemy(group.EnemyPrefab);
+
+                    if (spawned < group.Count - 1)
+                        yield return new WaitForSeconds(group.SpawnInterval);
+                }
             }
 
             // 等待本波敌人全部消失（被消灭或到达核心）
@@ -90,12 +93,12 @@ public sealed class WaveManager : MonoBehaviour
         Debug.Log("[Wave] 所有波次完成，胜利！");
     }
 
-    private void SpawnEnemy(int health)
+    private void SpawnEnemy(Enemy enemyPrefab)
     {
         Enemy enemy = Instantiate(enemyPrefab, pathManager.SpawnPosition, Quaternion.identity);
         enemiesAlive++;
 
-        enemy.Initialize(pathManager, health);
+        enemy.Initialize(pathManager);
         enemy.Died += HandleEnemyDied;
         enemy.ReachedBase += HandleEnemyReachedBase;
     }
@@ -103,7 +106,7 @@ public sealed class WaveManager : MonoBehaviour
     private void HandleEnemyReachedBase(Enemy enemy)
     {
         enemiesAlive = Mathf.Max(0, enemiesAlive - 1);
-        Debug.Log("[Wave] 敌人到达核心（场上剩余 " + enemiesAlive + "）");
+        Debug.Log("[Wave] " + enemy.name + " 到达核心（场上剩余 " + enemiesAlive + "）");
 
         if (GameManager.Instance != null)
             GameManager.Instance.LoseLife();
@@ -112,7 +115,13 @@ public sealed class WaveManager : MonoBehaviour
     private void HandleEnemyDied(Enemy enemy)
     {
         enemiesAlive = Mathf.Max(0, enemiesAlive - 1);
-        Debug.Log("[Wave] 敌人被消灭（场上剩余 " + enemiesAlive + "）");
+
+        if (GameManager.Instance != null && enemy != null)
+            GameManager.Instance.AddGold(enemy.GoldReward);
+
+        Debug.Log("[Wave] " + (enemy != null ? enemy.name : "?") +
+                  " 被消灭，获得 " + (enemy != null ? enemy.GoldReward : 0) +
+                  " 金币（场上剩余 " + enemiesAlive + "）");
     }
 
     private bool IsGameOver()

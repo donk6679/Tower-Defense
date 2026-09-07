@@ -2,43 +2,56 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 一波敌人的配置数据。WaveManager 会自动按这个配置刷怪。
+/// 一波敌人的完整配置：由若干“敌人组”组成。
+/// 每组指定使用哪种敌人 Prefab、刷几只、间隔多久。
 /// </summary>
 [Serializable]
 public sealed class WaveSettings
 {
-    [Header("Spawn")]
-    [SerializeField, Min(1)] private int enemyCount = 5;
-    [SerializeField, Min(0.1f)] private float spawnInterval = 1.2f;
+    [SerializeField] private EnemyGroup[] groups = new EnemyGroup[0];
 
     [Header("Timing")]
     [SerializeField, Min(0f)] private float delayBeforeWave = 1.5f;
     [SerializeField, Min(0f)] private float delayAfterWave = 2f;
 
-    [Header("Enemy")]
-    [SerializeField, Min(1)] private int enemyHealth = 5;
-
     public WaveSettings()
     {
     }
 
-    public WaveSettings(
-        int count,
-        float interval,
-        float beforeDelay,
-        float afterDelay,
-        int health)
+    public WaveSettings(EnemyGroup[] enemyGroups, float beforeDelay, float afterDelay)
     {
-        enemyCount = count;
-        spawnInterval = interval;
+        groups = enemyGroups == null ? new EnemyGroup[0] : enemyGroups;
         delayBeforeWave = beforeDelay;
         delayAfterWave = afterDelay;
-        enemyHealth = health;
     }
 
-    public int EnemyCount => enemyCount;
-    public float SpawnInterval => spawnInterval;
+    public EnemyGroup[] Groups => groups;
     public float DelayBeforeWave => delayBeforeWave;
     public float DelayAfterWave => delayAfterWave;
-    public int EnemyHealth => enemyHealth;
+}
+
+/// <summary>
+/// 敌人组：同一波内连续生成的一组相同类型敌人。
+/// </summary>
+[Serializable]
+public sealed class EnemyGroup
+{
+    [SerializeField] private Enemy enemyPrefab;
+    [SerializeField, Min(1)] private int count = 3;
+    [SerializeField, Min(0.1f)] private float spawnInterval = 1.2f;
+
+    public EnemyGroup()
+    {
+    }
+
+    public EnemyGroup(Enemy prefab, int enemyCount, float interval)
+    {
+        enemyPrefab = prefab;
+        count = Mathf.Max(1, enemyCount);
+        spawnInterval = Mathf.Max(0.1f, interval);
+    }
+
+    public Enemy EnemyPrefab => enemyPrefab;
+    public int Count => count;
+    public float SpawnInterval => spawnInterval;
 }

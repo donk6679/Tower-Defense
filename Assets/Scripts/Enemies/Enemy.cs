@@ -1,18 +1,28 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 敌人：沿 PathManager 提供的路径点移动，并拥有生命值。
-/// 死亡或到达核心时会发出对应事件，由 WaveManager / GameManager 响应。
+/// 敌人：沿 PathManager 路径移动，可被减速，拥有类型化属性（血量/速度/金币）。
+/// 存活敌人会登记到 ActiveEnemies，供炮塔索敌使用。
 /// </summary>
 public sealed class Enemy : MonoBehaviour
 {
+    /// <summary>当前场上所有存活敌人的列表，由敌人自行登记/注销。</summary>
+    public static readonly List<Enemy> ActiveEnemies = new List<Enemy>(64);
+
     [Header("Movement")]
     [SerializeField, Min(0.01f)] private float moveSpeed = 2f;
 
     [Header("Health")]
-    [SerializeField, Min(1)] private int maxHealth = 5;
+    [SerializeField, Min(1)] private int maxHealth = 10;
+
+    [Header("Reward")]
+    [SerializeField, Min(0)] private int goldReward = 5;
+
+    [Header("Slow Effect Visual")]
+    [SerializeField] private Color slowTint = new Color(0.3f, 0.8f, 1f, 1f);
 
     private PathManager pathManager;
     private int nextWaypointIndex = 1;
@@ -21,10 +31,17 @@ public sealed class Enemy : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Color originalSpriteColor;
 
+    private float slowRemaining;
+    private float moveSpeedMultiplier = 1f;
+
     public int MaxHealth => maxHealth;
     public int CurrentHealth => currentHealth;
     public bool IsDead => isDead;
     public float MoveSpeed => moveSpeed;
+    public int GoldReward => goldReward;
+
+    /// <summary>当前目标路径点索引，用于炮塔判断哪个敌人最接近终点。</summary>
+    public int WaypointProgress => nextWaypointIndex;
 
     /// <summary>敌人到达核心（此时 WaveManager 会通知 GameManager 扣生命）。</summary>
     public event Action<Enemy> ReachedBase;
@@ -40,18 +57,55 @@ public sealed class Enemy : MonoBehaviour
             originalSpriteColor = spriteRenderer.color;
     }
 
+    private void OnEnable()
+    {
+        if (!ActiveEnemies.Contains(this))
+            ActiveEnemies.Add(this);
+    }
+
+    private void OnDisable()
+    {
+        ActiveEnemies.Remove(this);
+    }
+
     /// <summary>
-    /// 绑定路径并可选覆盖生命值。出生位置为路径第一个点，因此从第二个路径点开始前进。
+    /// 绑定路径。出生位置为路径第一个点，因此从第二个路径点开始前进。
     /// </summary>
-    public void Initialize(PathManager path, int healthOverride = -1)
+    public void Initialize(PathManager path)
     {
         pathManager = path;
         nextWaypointIndex = 1;
-
-        if (healthOverride > 0)
-            maxHealth = healthOverride;
-
         currentHealth = maxHealth;
+    }
+
+    public void SetMoveSpeed(float value)
+    {
+        moveSpeed = Mathf.Max(0.01f, value);
+    }
+
+    public void SetMaxHealth(int value)
+    {
+        maxHealth = Mathf.Max(1, value);
+        currentHealth = maxHealth;
+    }
+
+    public void SetGoldReward(int value)
+    {
+        goldReward = Mathf.Max(0, value);
+    }
+
+    /// <summary>
+    /// 施加减速。multiplier 是速度倍率（0.6 = 减速 40%），duration 为持续秒数。
+    /// 重复施加时保留更慢的倍率与更长的剩余时间。
+    /// </summary>
+    public void ApplySlow(float multiplier, float duration)
+    {
+        if (isDead || duration <= 0f)
+            return;
+
+        moveSpeedMultiplier = Mathf.Min(moveSpeedMultiplier, Mathf.Clamp(multiplier, 0.05f, 1f));
+        slowRemaining = Mathf.Max(slowRemaining, duration);
+        RefreshVisual();
     }
 
     public void TakeDamage(int damage)
@@ -61,8 +115,6 @@ public sealed class Enemy : MonoBehaviour
 
         currentHealth = Mathf.Max(0, currentHealth - damage);
         PlayDamageFlash();
-
-        Debug.Log("[Enemy] 受到 " + damage + " 点伤害，剩余生命 " + currentHealth, this);
 
         if (currentHealth <= 0)
             Die();
@@ -74,7 +126,6 @@ public sealed class Enemy : MonoBehaviour
             return;
 
         isDead = true;
-        Debug.Log("[Enemy] 被消灭", this);
 
         Died?.Invoke(this);
         SpawnDeathBurst();
@@ -83,6 +134,17 @@ public sealed class Enemy : MonoBehaviour
 
     private void Update()
     {
+        if (slowRemaining > 0f)
+        {
+            slowRemaining -= Time.deltaTime;
+            if (slowRemaining <= 0f)
+            {
+                slowRemaining = 0f;
+                moveSpeedMultiplier = 1f;
+                RefreshVisual();
+            }
+        }
+
         if (pathManager == null || pathManager.WaypointCount == 0)
             return;
 
@@ -98,7 +160,7 @@ public sealed class Enemy : MonoBehaviour
             return;
 
         Vector3 direction = target.position - transform.position;
-        float step = moveSpeed * Time.deltaTime;
+        float step = moveSpeed * moveSpeedMultiplier * Time.deltaTime;
 
         // 一步之内到达：直接吸附到路径点，避免转弯抖动
         if (direction.magnitude <= step)
@@ -113,7 +175,7 @@ public sealed class Enemy : MonoBehaviour
 
     private void ReachBase()
     {
-        Debug.Log("[Enemy] 到达核心", this);
+        Debug.Log("[Enemy] " + name + " 到达核心", this);
         ReachedBase?.Invoke(this);
         Destroy(gameObject);
     }
@@ -131,7 +193,17 @@ public sealed class Enemy : MonoBehaviour
     {
         spriteRenderer.color = Color.white;
         yield return new WaitForSeconds(0.08f);
-        spriteRenderer.color = originalSpriteColor;
+        RefreshVisual();
+    }
+
+    private void RefreshVisual()
+    {
+        if (spriteRenderer == null)
+            return;
+
+        spriteRenderer.color = slowRemaining > 0f
+            ? Color.Lerp(originalSpriteColor, slowTint, 0.65f)
+            : originalSpriteColor;
     }
 
     private void SpawnDeathBurst()

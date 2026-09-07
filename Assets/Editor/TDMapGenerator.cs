@@ -40,6 +40,9 @@ namespace TowerDefense.EditorTools
         [MenuItem("Tools/Tower Defense/Generate Map & Main Scene", priority = 1)]
         public static void GenerateMap()
         {
+            if (TDMenuGuard.IsInPlayMode())
+                return;
+
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 

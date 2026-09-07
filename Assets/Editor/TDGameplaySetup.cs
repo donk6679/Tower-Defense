@@ -18,6 +18,9 @@ namespace TowerDefense.EditorTools
         [MenuItem("Tools/Tower Defense/Setup Wave & Life Test", priority = 3)]
         public static void SetupDay2Gameplay()
         {
+            if (TDMenuGuard.IsInPlayMode())
+                return;
+
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
@@ -46,12 +49,17 @@ namespace TowerDefense.EditorTools
 
             waveManager.Setup(
                 pathManager,
-                enemyPrefab,
                 new[]
                 {
-                    new WaveSettings(5, 1.4f, 1.0f, 2.5f, 5),
-                    new WaveSettings(8, 1.2f, 2.0f, 2.5f, 5),
-                    new WaveSettings(10, 1.0f, 2.0f, 3.0f, 5),
+                    new WaveSettings(
+                        new[] { new EnemyGroup(enemyPrefab, 5, 1.4f) },
+                        1.0f, 2.5f),
+                    new WaveSettings(
+                        new[] { new EnemyGroup(enemyPrefab, 8, 1.2f) },
+                        2.0f, 2.5f),
+                    new WaveSettings(
+                        new[] { new EnemyGroup(enemyPrefab, 10, 1.0f) },
+                        2.0f, 3.0f),
                 });
 
             if (gameManager.GetComponent<DebugEnemyKiller>() == null)

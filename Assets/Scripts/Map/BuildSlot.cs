@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 单个可建造地块：记录占用状态，供后续 BuildManager 使用。
+/// 单个可建造地块：点击后由 BuildManager 尝试在此建造。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
 public sealed class BuildSlot : MonoBehaviour
@@ -13,11 +13,37 @@ public sealed class BuildSlot : MonoBehaviour
     [Header("State")]
     [SerializeField] private bool occupied;
 
+    private SpriteRenderer spriteRenderer;
+    private Color normalColor = Color.white;
+
     public bool IsOccupied => occupied;
+
+    private void Awake()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+            normalColor = spriteRenderer.color;
+    }
 
     public void SetOccupied(bool value)
     {
         occupied = value;
+
+        if (spriteRenderer == null)
+            return;
+
+        spriteRenderer.color = value
+            ? new Color(0.55f, 0.55f, 0.55f, 0.75f)
+            : normalColor;
+    }
+
+    private void OnMouseDown()
+    {
+        if (!isBuildable)
+            return;
+
+        if (BuildManager.Instance != null)
+            BuildManager.Instance.TryBuild(this);
     }
 
     private void OnDrawGizmos()

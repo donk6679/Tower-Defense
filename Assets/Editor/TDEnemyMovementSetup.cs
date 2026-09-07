@@ -20,6 +20,9 @@ namespace TowerDefense.EditorTools
         [MenuItem("Tools/Tower Defense/Add Enemy Movement Test", priority = 2)]
         public static void SetupEnemyMovementTest()
         {
+            if (TDMenuGuard.IsInPlayMode())
+                return;
+
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 

@@ -8228,23 +8228,40 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pathManager: {fileID: 1379791718}
-  enemyPrefab: {fileID: 6652851491108187166, guid: 2fb0c36870a12014b9cc67f4dc1acf6a, type: 3}
   waves:
-  - enemyCount: 5
-    spawnInterval: 1.4
+  - groups:
+    - enemyPrefab: {fileID: 2575307631529893608, guid: 2fb0c36870a12014b9cc67f4dc1acf6a, type: 3}
+      count: 4
+      spawnInterval: 1.4
+    - enemyPrefab: {fileID: 3404557311177048559, guid: 8ceecef551dcd9b49b0d6a762253dddf, type: 3}
+      count: 2
+      spawnInterval: 1.1
     delayBeforeWave: 1
     delayAfterWave: 2.5
-    enemyHealth: 5
-  - enemyCount: 8
-    spawnInterval: 1.2
-    delayBeforeWave: 2
-    delayAfterWave: 2.5
-    enemyHealth: 5
-  - enemyCount: 10
-    spawnInterval: 1
+  - groups:
+    - enemyPrefab: {fileID: 2575307631529893608, guid: 2fb0c36870a12014b9cc67f4dc1acf6a, type: 3}
+      count: 5
+      spawnInterval: 1.3
+    - enemyPrefab: {fileID: 3404557311177048559, guid: 8ceecef551dcd9b49b0d6a762253dddf, type: 3}
+      count: 3
+      spawnInterval: 1
+    - enemyPrefab: {fileID: 7149528972071482635, guid: e364a1580929cff4a91b451b7b22b590, type: 3}
+      count: 1
+      spawnInterval: 2.5
     delayBeforeWave: 2
     delayAfterWave: 3
-    enemyHealth: 5
+  - groups:
+    - enemyPrefab: {fileID: 2575307631529893608, guid: 2fb0c36870a12014b9cc67f4dc1acf6a, type: 3}
+      count: 4
+      spawnInterval: 1.2
+    - enemyPrefab: {fileID: 3404557311177048559, guid: 8ceecef551dcd9b49b0d6a762253dddf, type: 3}
+      count: 4
+      spawnInterval: 0.9
+    - enemyPrefab: {fileID: 7149528972071482635, guid: e364a1580929cff4a91b451b7b22b590, type: 3}
+      count: 2
+      spawnInterval: 2.2
+    delayBeforeWave: 2
+    delayAfterWave: 3
   enemiesAlive: 0
   currentWaveNumber: 0
 --- !u!1 &382500239
@@ -29563,6 +29580,7 @@ Transform:
   - {fileID: 1109539513}
   - {fileID: 1379791717}
   - {fileID: 380303413}
+  - {fileID: 1512879343}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1489874258
@@ -29941,6 +29959,60 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &1512879342
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1512879343}
+  - component: {fileID: 1512879344}
+  m_Layer: 0
+  m_Name: BuildManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1512879343
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1512879342}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1484496279}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1512879344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1512879342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cba1e0ae3c1c65c41ab11ae03ab95f5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  towerTypes:
+  - displayName: Gun Tower
+    towerPrefab: {fileID: 687660046577857059, guid: 0f313024a25ee7844b60cdb2cdc34470, type: 3}
+    cost: 60
+  - displayName: Frost Tower
+    towerPrefab: {fileID: 4932856026403001703, guid: fd809886666faad4b8f99f729bbfbe92, type: 3}
+    cost: 75
+  - displayName: Sniper Tower
+    towerPrefab: {fileID: 6315303432801870912, guid: b4ba7dff51cced64fa20068034dedd7e, type: 3}
+    cost: 110
 --- !u!1 &1529412060
 GameObject:
   m_ObjectHideFlags: 0
@@ -35113,6 +35185,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startingLives: 20
+  startingGold: 200
 --- !u!4 &1765459123
 Transform:
   m_ObjectHideFlags: 0
