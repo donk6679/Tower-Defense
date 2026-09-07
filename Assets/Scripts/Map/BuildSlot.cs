@@ -15,10 +15,15 @@ public sealed class BuildSlot : MonoBehaviour
     [Header("State")]
     [SerializeField] private bool occupied;
 
+    private TowerBase placedTower;
+    private int towerCost;
     private SpriteRenderer spriteRenderer;
     private Color normalColor = Color.white;
 
     public bool IsOccupied => occupied;
+    public bool HasTower => placedTower != null;
+    public TowerBase PlacedTower => placedTower;
+    public int TowerCost => towerCost;
 
     private void Awake()
     {
@@ -27,7 +32,24 @@ public sealed class BuildSlot : MonoBehaviour
             normalColor = spriteRenderer.color;
     }
 
-    public void SetOccupied(bool value)
+    public void PlaceTower(TowerBase tower, int cost)
+    {
+        placedTower = tower;
+        towerCost = Mathf.Max(0, cost);
+        SetOccupied(true);
+    }
+
+    /// <summary>拆除塔并释放地块；返回被拆除的塔（可能为空）。</summary>
+    public TowerBase RemoveTower()
+    {
+        TowerBase tower = placedTower;
+        placedTower = null;
+        towerCost = 0;
+        SetOccupied(false);
+        return tower;
+    }
+
+    private void SetOccupied(bool value)
     {
         occupied = value;
 
@@ -49,7 +71,12 @@ public sealed class BuildSlot : MonoBehaviour
             return;
 
         if (BuildManager.Instance != null)
-            BuildManager.Instance.TryBuild(this);
+        {
+            if (BuildManager.Instance.IsDemolishMode)
+                BuildManager.Instance.TryDemolish(this);
+            else
+                BuildManager.Instance.TryBuild(this);
+        }
     }
 
     private void OnDrawGizmos()

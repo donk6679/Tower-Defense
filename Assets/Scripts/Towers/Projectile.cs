@@ -14,6 +14,16 @@ public class Projectile : MonoBehaviour
 
     private Enemy target;
     private float lifeTime;
+    private SpriteRenderer spriteRenderer;
+    private Color trailColor = Color.white;
+    private float trailTimer;
+
+    private void Awake()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+            trailColor = spriteRenderer.color;
+    }
 
     public void Launch(Enemy enemy, int damageAmount)
     {
@@ -29,6 +39,15 @@ public class Projectile : MonoBehaviour
     private void Update()
     {
         lifeTime += Time.deltaTime;
+
+        // 每帧按间隔留下光点拖尾
+        trailTimer -= Time.deltaTime;
+        if (trailTimer <= 0f)
+        {
+            SpawnTrail();
+            trailTimer = 0.025f;
+        }
+
         if (lifeTime >= maxLifeTime)
         {
             Destroy(gameObject);
@@ -48,6 +67,7 @@ public class Projectile : MonoBehaviour
         if (direction.magnitude <= step + 0.25f)
         {
             OnHitTarget(target);
+            VFXBurst.PlayImpact(transform.position, trailColor);
             Destroy(gameObject);
             return;
         }
@@ -59,5 +79,17 @@ public class Projectile : MonoBehaviour
     {
         if (enemy != null)
             enemy.TakeDamage(damage);
+    }
+
+    private void SpawnTrail()
+    {
+        float startScale = Mathf.Max(0.06f, transform.localScale.x * 0.55f);
+        EffectPulse.Create(
+            VFXFactory.GlowSprite,
+            trailColor,
+            transform.position,
+            startScale,
+            0f,
+            0.14f);
     }
 }

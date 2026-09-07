@@ -3,24 +3,33 @@ using UnityEngine;
 
 /// <summary>
 /// 建造管理器：管理可选塔类型、选中状态、扣金币与放置炮塔。
-/// 数字键与底部 UI 按钮都可以选塔，随后点击浅绿色地块建造。
+/// 数字键与底部 UI 按钮都可以选塔，随后点击浅绿色地块建造；
+/// X 或底部按钮可切换“拆除模式”，点击已有塔的地块将其拆除并返还金币。
 /// </summary>
 public sealed class BuildManager : MonoBehaviour
 {
     public static BuildManager Instance { get; private set; }
 
+    [Header("Demolish")]
+    [SerializeField, Range(0f, 1f)] private float demolishRefundRate = 0.5f;
+
     [SerializeField] private TowerTypeConfig[] towerTypes = new TowerTypeConfig[0];
 
     private int selectedIndex = -1;
     private Transform towerParent;
+    private bool demolishMode;
 
     public bool HasSelection => selectedIndex >= 0 && selectedIndex < towerTypes.Length;
     public int SelectedIndex => HasSelection ? selectedIndex : -1;
     public TowerTypeConfig[] AvailableTowers => towerTypes;
     public TowerTypeConfig SelectedTower => HasSelection ? towerTypes[selectedIndex] : null;
+    public bool IsDemolishMode => demolishMode;
 
     /// <summary>选中变化：-1 表示取消选择，否则为塔列表下标。</summary>
     public event Action<int> SelectionChanged;
+
+    /// <summary>拆除模式开关变化。</summary>
+    public event Action<bool> DemolishModeChanged;
 
     private void Awake()
     {
@@ -35,12 +44,20 @@ public sealed class BuildManager : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            ToggleDemolishMode();
+            return;
+        }
+
         if (towerTypes == null || towerTypes.Length == 0)
             return;
 
         if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Escape))
         {
             ClearSelection();
+            if (demolishMode)
+                SetDemolishMode(false);
             return;
         }
 
@@ -60,6 +77,9 @@ public sealed class BuildManager : MonoBehaviour
 
     public void SelectTower(int index)
     {
+        if (demolishMode)
+            SetDemolishMode(false);
+
         if (towerTypes == null || index < 0 || index >= towerTypes.Length)
         {
             ClearSelection();
@@ -86,12 +106,37 @@ public sealed class BuildManager : MonoBehaviour
         SelectionChanged?.Invoke(-1);
     }
 
+    public void ToggleDemolishMode()
+    {
+        SetDemolishMode(!demolishMode);
+    }
+
+    private void SetDemolishMode(bool value)
+    {
+        if (demolishMode == value)
+            return;
+
+        demolishMode = value;
+
+        if (demolishMode)
+            ClearSelection();
+
+        Debug.Log(demolishMode
+            ? "[Build] 拆除模式已开启：点击已有塔的地块可拆除"
+            : "[Build] 拆除模式已关闭");
+
+        DemolishModeChanged?.Invoke(demolishMode);
+    }
+
     public void TryBuild(BuildSlot slot)
     {
         if (slot == null || !slot.isBuildable)
             return;
 
         if (GameManager.Instance != null && GameManager.Instance.IsGameOver)
+            return;
+
+        if (demolishMode)
             return;
 
         if (!HasSelection)
@@ -134,8 +179,43 @@ public sealed class BuildManager : MonoBehaviour
             Quaternion.identity,
             towerParent);
 
-        slot.SetOccupied(true);
+        slot.PlaceTower(tower, config.Cost);
         Debug.Log("[Build] 建造了 " + config.DisplayName + "，剩余金币 " + GameManager.Instance.Gold, tower);
+    }
+
+    public void TryDemolish(BuildSlot slot)
+    {
+        if (slot == null || !slot.isBuildable)
+            return;
+
+        if (!demolishMode)
+        {
+            Debug.Log("[Build] 当前不在拆除模式");
+            return;
+        }
+
+        if (GameManager.Instance == null)
+        {
+            Debug.LogWarning("[Build] 找不到 GameManager");
+            return;
+        }
+
+        if (!slot.IsOccupied)
+        {
+            Debug.Log("[Build] 这个地块上没有塔");
+            return;
+        }
+
+        int refund = Mathf.RoundToInt(slot.TowerCost * demolishRefundRate);
+        TowerBase tower = slot.RemoveTower();
+
+        if (tower != null)
+            Destroy(tower.gameObject);
+
+        if (refund > 0)
+            GameManager.Instance.AddGold(refund);
+
+        Debug.Log("[Build] 已拆除炮塔，返还 " + refund + " 金币，当前 " + GameManager.Instance.Gold);
     }
 
     private Transform FindOrCreateTowerParent()

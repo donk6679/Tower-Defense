@@ -63,17 +63,20 @@ namespace TowerDefense.EditorTools
             gameManager.SetStartingGold(200);
 
             // 8 波手动波次：玩家准备好后点击 Start Wave
-            waveManager.Setup(pathManager, new[]
+            if (waveManager.TotalWaveCount == 0)
             {
-                Wave(basicEnemy, 4, 1.4f, 1.2f, 2.2f),
-                Wave(basicEnemy, 5, 1.4f, fastEnemy, 2, 1.0f, 1.2f, 2.2f),
-                Wave(basicEnemy, 5, 1.3f, fastEnemy, 3, 0.9f, tankEnemy, 1, 2.5f, 1.2f, 2.4f),
-                Wave(basicEnemy, 6, 1.3f, fastEnemy, 3, 0.8f, tankEnemy, 1, 2.5f, 1.2f, 2.4f),
-                Wave(basicEnemy, 6, 1.2f, fastEnemy, 4, 0.8f, tankEnemy, 2, 2.4f, 1.1f, 2.3f),
-                Wave(basicEnemy, 7, 1.1f, fastEnemy, 4, 0.7f, tankEnemy, 2, 2.3f, 1.1f, 2.2f),
-                Wave(basicEnemy, 7, 1.0f, fastEnemy, 5, 0.7f, tankEnemy, 3, 2.2f, 1.0f, 2.1f),
-                Wave(basicEnemy, 8, 0.9f, fastEnemy, 6, 0.6f, tankEnemy, 4, 2.0f, 1.0f, 2.0f),
-            });
+                waveManager.Setup(pathManager, new[]
+                {
+                    Wave(basicEnemy, 4, 1.4f, 1.2f, 2.2f),
+                    Wave(basicEnemy, 5, 1.4f, fastEnemy, 2, 1.0f, 1.2f, 2.2f),
+                    Wave(basicEnemy, 5, 1.3f, fastEnemy, 3, 0.9f, tankEnemy, 1, 2.5f, 1.2f, 2.4f),
+                    Wave(basicEnemy, 6, 1.3f, fastEnemy, 3, 0.8f, tankEnemy, 1, 2.5f, 1.2f, 2.4f),
+                    Wave(basicEnemy, 6, 1.2f, fastEnemy, 4, 0.8f, tankEnemy, 2, 2.4f, 1.1f, 2.3f),
+                    Wave(basicEnemy, 7, 1.1f, fastEnemy, 4, 0.7f, tankEnemy, 2, 2.3f, 1.1f, 2.2f),
+                    Wave(basicEnemy, 7, 1.0f, fastEnemy, 5, 0.7f, tankEnemy, 3, 2.2f, 1.0f, 2.1f),
+                    Wave(basicEnemy, 8, 0.9f, fastEnemy, 6, 0.6f, tankEnemy, 4, 2.0f, 1.0f, 2.0f),
+                });
+            }
 
             CreateOrReplaceUI(buildManager);
             EnsureEventSystemExists();
@@ -204,7 +207,7 @@ namespace TowerDefense.EditorTools
             towerArea.anchorMax = new Vector2(0f, 0f);
             towerArea.pivot = new Vector2(0f, 0f);
             towerArea.anchoredPosition = new Vector2(20f, 20f);
-            towerArea.sizeDelta = new Vector2(25f + count * 250f, 90f);
+            towerArea.sizeDelta = new Vector2(25f + (count + 1) * 250f, 90f);
 
             ui.towerButtons = new Button[count];
 
@@ -219,6 +222,14 @@ namespace TowerDefense.EditorTools
 
                 ui.towerButtons[i] = button;
             }
+
+            ui.demolishButton = CreateButton(
+                towerArea, "DemolishButton", "Remove Mode (X)",
+                whiteSprite, 28, ButtonNormal,
+                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+                new Vector2(count * 250f, 0f), new Vector2(240f, 80f));
+
+            ui.demolishButtonText = ui.demolishButton.GetComponentInChildren<Text>();
         }
 
         private static void BuildStartButton(Transform canvasRoot, UIManager ui, Sprite whiteSprite)

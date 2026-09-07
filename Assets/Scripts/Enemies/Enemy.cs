@@ -213,6 +213,9 @@ public sealed class Enemy : MonoBehaviour
 
         Color burstColor = Color.Lerp(originalSpriteColor, Color.white, 0.55f);
 
+        // 大范围组合特效：圆环扩散 + 柔光爆闪 + 光点迸发
+        VFXBurst.PlayDeath(transform.position, originalSpriteColor);
+
         for (int i = 0; i < 7; i++)
         {
             GameObject shardObject = new GameObject("DeathShard_" + i);

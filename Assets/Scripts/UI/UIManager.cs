@@ -17,6 +17,8 @@ public sealed class UIManager : MonoBehaviour
 
     [Header("Tower Buttons")]
     public Button[] towerButtons;
+    public Button demolishButton;
+    public Text demolishButtonText;
 
     [Header("Wave")]
     public Button startButton;
@@ -67,6 +69,7 @@ public sealed class UIManager : MonoBehaviour
         waveManager.WaveBegan += OnWaveBegan;
         waveManager.WaveCleared += OnWaveCleared;
         buildManager.SelectionChanged += OnSelectionChanged;
+        buildManager.DemolishModeChanged += OnDemolishModeChanged;
     }
 
     private void Unsubscribe()
@@ -80,6 +83,7 @@ public sealed class UIManager : MonoBehaviour
         waveManager.WaveBegan -= OnWaveBegan;
         waveManager.WaveCleared -= OnWaveCleared;
         buildManager.SelectionChanged -= OnSelectionChanged;
+        buildManager.DemolishModeChanged -= OnDemolishModeChanged;
     }
 
     private void SetupButtonListeners()
@@ -96,6 +100,8 @@ public sealed class UIManager : MonoBehaviour
             winRestartButton.onClick.AddListener(RestartGame);
         if (loseRestartButton != null)
             loseRestartButton.onClick.AddListener(RestartGame);
+        if (demolishButton != null)
+            demolishButton.onClick.AddListener(buildManager.ToggleDemolishMode);
     }
 
     private void CacheTowerLabels()
@@ -114,6 +120,7 @@ public sealed class UIManager : MonoBehaviour
         OnLivesChanged(gameManager.Lives);
         UpdateWaveStartUI();
         OnSelectionChanged(-1);
+        OnDemolishModeChanged(buildManager.IsDemolishMode);
     }
 
     private void OnGoldChanged(int gold)
@@ -193,6 +200,27 @@ public sealed class UIManager : MonoBehaviour
         else
             hintText.text = "Selected: " + towerButtonLabels[index] +
                             "  |  Click a green tile to build (Esc to cancel)";
+    }
+
+    private void OnDemolishModeChanged(bool isActive)
+    {
+        if (demolishButton != null && demolishButtonText != null)
+        {
+            Image image = demolishButton.GetComponent<Image>();
+            if (image != null)
+                image.color = isActive ? SelectedButtonColor : NormalButtonColor;
+
+            demolishButtonText.text = isActive
+                ? "Remove Mode: ON"
+                : "Remove Mode (X)";
+        }
+
+        if (hintText != null)
+        {
+            hintText.text = isActive
+                ? "REMOVE MODE: click an occupied tile to demolish its tower"
+                : "Select a tower button, then click a green tile";
+        }
     }
 
     private void OnGameEnded(bool won)
