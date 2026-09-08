@@ -71,12 +71,7 @@ public sealed class BuildSlot : MonoBehaviour
             return;
 
         if (BuildManager.Instance != null)
-        {
-            if (BuildManager.Instance.IsDemolishMode)
-                BuildManager.Instance.TryDemolish(this);
-            else
-                BuildManager.Instance.TryBuild(this);
-        }
+            BuildManager.Instance.OnBuildSlotClicked(this);
     }
 
     private void OnDrawGizmos()

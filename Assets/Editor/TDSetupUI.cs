@@ -167,6 +167,7 @@ namespace TowerDefense.EditorTools
             BuildHUD(uiRoot.transform, ui);
             BuildTowerButtons(uiRoot.transform, ui, buildManager, whiteSprite);
             BuildStartButton(uiRoot.transform, ui, whiteSprite);
+            BuildUpgradePanel(uiRoot.transform, ui, whiteSprite);
             BuildResultPanels(uiRoot.transform, ui, whiteSprite);
         }
 
@@ -241,6 +242,39 @@ namespace TowerDefense.EditorTools
                 new Vector2(0f, 24f), new Vector2(340f, 90f));
 
             ui.startButtonText = ui.startButton.GetComponentInChildren<Text>();
+        }
+
+        private static void BuildUpgradePanel(Transform canvasRoot, UIManager ui, Sprite whiteSprite)
+        {
+            RectTransform panel = CreateRect(canvasRoot, "UpgradePanel");
+            panel.anchorMin = new Vector2(1f, 0f);
+            panel.anchorMax = new Vector2(1f, 0f);
+            panel.pivot = new Vector2(1f, 0f);
+            panel.anchoredPosition = new Vector2(-20f, 20f);
+            panel.sizeDelta = new Vector2(520f, 220f);
+
+            Image background = panel.gameObject.AddComponent<Image>();
+            background.sprite = whiteSprite;
+            background.type = Image.Type.Simple;
+            background.color = new Color(0.08f, 0.12f, 0.18f, 0.94f);
+
+            ui.upgradeInfoText = CreateScreenText(
+                panel, "UpgradeInfo", "Click a tower to inspect it",
+                28, Color.white,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -12f), new Vector2(500f, 140f),
+                TextAnchor.UpperCenter);
+
+            ui.upgradeButton = CreateButton(
+                panel, "UpgradeButton", "Upgrade",
+                whiteSprite, 30, new Color(0.2f, 0.45f, 0.25f, 1f),
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 16f), new Vector2(300f, 64f));
+
+            ui.upgradeButtonText = ui.upgradeButton.GetComponentInChildren<Text>();
+
+            ui.upgradePanel = panel.gameObject;
+            panel.gameObject.SetActive(false);
         }
 
         private static void BuildResultPanels(Transform canvasRoot, UIManager ui, Sprite whiteSprite)
@@ -324,7 +358,8 @@ namespace TowerDefense.EditorTools
             Vector2 anchor,
             Vector2 pivot,
             Vector2 anchoredPosition,
-            Vector2 size)
+            Vector2 size,
+            TextAnchor alignment = TextAnchor.MiddleLeft)
         {
             RectTransform rect = CreateRect(parent, name);
             rect.anchorMin = anchor;
@@ -356,7 +391,8 @@ namespace TowerDefense.EditorTools
             Vector2 anchor,
             Vector2 pivot,
             Vector2 anchoredPosition,
-            Vector2 size)
+            Vector2 size,
+            TextAnchor alignment = TextAnchor.MiddleLeft)
         {
             RectTransform rect = CreateRect(parent, name);
             rect.anchorMin = anchor;
@@ -370,7 +406,7 @@ namespace TowerDefense.EditorTools
             text.fontSize = fontSize;
             text.color = color;
             text.text = content;
-            text.alignment = TextAnchor.MiddleLeft;
+            text.alignment = alignment;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;
             text.raycastTarget = false;

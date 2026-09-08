@@ -18,18 +18,23 @@ public sealed class BuildManager : MonoBehaviour
     private int selectedIndex = -1;
     private Transform towerParent;
     private bool demolishMode;
+    private TowerBase selectedUpgradeTower;
 
     public bool HasSelection => selectedIndex >= 0 && selectedIndex < towerTypes.Length;
     public int SelectedIndex => HasSelection ? selectedIndex : -1;
     public TowerTypeConfig[] AvailableTowers => towerTypes;
     public TowerTypeConfig SelectedTower => HasSelection ? towerTypes[selectedIndex] : null;
     public bool IsDemolishMode => demolishMode;
+    public TowerBase SelectedUpgradeTower => selectedUpgradeTower;
 
     /// <summary>选中变化：-1 表示取消选择，否则为塔列表下标。</summary>
     public event Action<int> SelectionChanged;
 
     /// <summary>拆除模式开关变化。</summary>
     public event Action<bool> DemolishModeChanged;
+
+    /// <summary>被选中的已有炮塔变化（null 表示取消选中）。</summary>
+    public event Action<TowerBase> UpgradeSelectionChanged;
 
     private void Awake()
     {
@@ -93,17 +98,62 @@ public sealed class BuildManager : MonoBehaviour
         }
 
         selectedIndex = index;
+        ClearUpgradeTowerSelection();
         Debug.Log("[Build] 选择 " + towerTypes[index].DisplayName + "，点击浅绿色地块建造", this);
         SelectionChanged?.Invoke(index);
     }
 
     public void ClearSelection()
     {
-        if (selectedIndex == -1)
+        if (selectedIndex != -1)
+        {
+            selectedIndex = -1;
+            SelectionChanged?.Invoke(-1);
+        }
+
+        ClearUpgradeTowerSelection();
+    }
+
+    public void ClearUpgradeTowerSelection()
+    {
+        if (selectedUpgradeTower == null)
             return;
 
-        selectedIndex = -1;
-        SelectionChanged?.Invoke(-1);
+        selectedUpgradeTower = null;
+        UpgradeSelectionChanged?.Invoke(null);
+    }
+
+    /// <summary>
+    /// 地块点击统一入口：
+    /// 拆除模式 → 拆塔；已占用地块 → 查看/升级该塔；空地 → 尝试建造。
+    /// </summary>
+    public void OnBuildSlotClicked(BuildSlot slot)
+    {
+        if (slot == null || !slot.isBuildable)
+            return;
+
+        if (demolishMode)
+        {
+            TryDemolish(slot);
+            return;
+        }
+
+        if (slot.IsOccupied)
+        {
+            SelectUpgradeTower(slot.HasTower ? slot.PlacedTower : null);
+            return;
+        }
+
+        TryBuild(slot);
+    }
+
+    private void SelectUpgradeTower(TowerBase tower)
+    {
+        if (selectedUpgradeTower == tower)
+            return;
+
+        selectedUpgradeTower = tower;
+        UpgradeSelectionChanged?.Invoke(tower);
     }
 
     public void ToggleDemolishMode()
@@ -179,6 +229,8 @@ public sealed class BuildManager : MonoBehaviour
             Quaternion.identity,
             towerParent);
 
+        tower.SetInitialCost(config.Cost);
+        ClearUpgradeTowerSelection();
         slot.PlaceTower(tower, config.Cost);
         Debug.Log("[Build] 建造了 " + config.DisplayName + "，剩余金币 " + GameManager.Instance.Gold, tower);
     }
@@ -206,16 +258,22 @@ public sealed class BuildManager : MonoBehaviour
             return;
         }
 
-        int refund = Mathf.RoundToInt(slot.TowerCost * demolishRefundRate);
-        TowerBase tower = slot.RemoveTower();
+        TowerBase tower = slot.PlacedTower;
+        int investedGold = tower != null ? tower.TotalInvestedGold : slot.TowerCost;
+        int refund = Mathf.RoundToInt(investedGold * demolishRefundRate);
+        TowerBase removedTower = slot.RemoveTower();
 
-        if (tower != null)
-            Destroy(tower.gameObject);
+        if (removedTower != null)
+            Destroy(removedTower.gameObject);
+
+        if (selectedUpgradeTower == removedTower)
+            ClearUpgradeTowerSelection();
 
         if (refund > 0)
             GameManager.Instance.AddGold(refund);
 
-        Debug.Log("[Build] 已拆除炮塔，返还 " + refund + " 金币，当前 " + GameManager.Instance.Gold);
+        Debug.Log("[Build] 已拆除炮塔（累计投入 " + investedGold +
+                  "），返还 " + refund + " 金币，当前 " + GameManager.Instance.Gold);
     }
 
     private Transform FindOrCreateTowerParent()

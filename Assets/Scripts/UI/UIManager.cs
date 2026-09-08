@@ -24,6 +24,12 @@ public sealed class UIManager : MonoBehaviour
     public Button startButton;
     public Text startButtonText;
 
+    [Header("Upgrade Panel")]
+    public GameObject upgradePanel;
+    public Text upgradeInfoText;
+    public Button upgradeButton;
+    public Text upgradeButtonText;
+
     [Header("Results")]
     public GameObject winPanel;
     public Button winRestartButton;
@@ -78,6 +84,7 @@ public sealed class UIManager : MonoBehaviour
         gameManager.GameEnded += OnGameEnded;
         buildManager.SelectionChanged += OnSelectionChanged;
         buildManager.DemolishModeChanged += OnDemolishModeChanged;
+        buildManager.UpgradeSelectionChanged += OnUpgradeSelectionChanged;
     }
 
     private void Unsubscribe()
@@ -90,6 +97,7 @@ public sealed class UIManager : MonoBehaviour
         gameManager.GameEnded -= OnGameEnded;
         buildManager.SelectionChanged -= OnSelectionChanged;
         buildManager.DemolishModeChanged -= OnDemolishModeChanged;
+        buildManager.UpgradeSelectionChanged -= OnUpgradeSelectionChanged;
     }
 
     private void SetupButtonListeners()
@@ -112,6 +120,8 @@ public sealed class UIManager : MonoBehaviour
             loseMenuButton.onClick.AddListener(LoadMainMenu);
         if (demolishButton != null)
             demolishButton.onClick.AddListener(buildManager.ToggleDemolishMode);
+        if (upgradeButton != null)
+            upgradeButton.onClick.AddListener(RequestTowerUpgrade);
     }
 
     private void CacheTowerLabels()
@@ -137,6 +147,9 @@ public sealed class UIManager : MonoBehaviour
     {
         if (goldText != null)
             goldText.text = "Gold: " + gold;
+
+        if (upgradePanel != null && upgradePanel.activeSelf && buildManager != null)
+            RefreshUpgradePanel(buildManager.SelectedUpgradeTower);
     }
 
     private void OnLivesChanged(int lives)
@@ -213,6 +226,46 @@ public sealed class UIManager : MonoBehaviour
             Debug.Log("[UI] 当前还不能提前开波");
     }
 
+    private void OnUpgradeSelectionChanged(TowerBase tower)
+    {
+        if (upgradePanel != null)
+            upgradePanel.SetActive(tower != null);
+
+        if (tower != null)
+            RefreshUpgradePanel(tower);
+    }
+
+    private void RefreshUpgradePanel(TowerBase tower)
+    {
+        if (tower == null)
+            return;
+
+        if (upgradeInfoText != null)
+            upgradeInfoText.text = tower.GetUpgradeDescription();
+
+        if (upgradeButtonText != null)
+            upgradeButtonText.text = tower.CanUpgrade
+                ? "Upgrade  " + tower.NextUpgradeCost + "g"
+                : "MAX LEVEL";
+
+        if (upgradeButton != null)
+        {
+            upgradeButton.interactable = tower.CanUpgrade &&
+                                         gameManager != null &&
+                                         gameManager.Gold >= tower.NextUpgradeCost;
+        }
+    }
+
+    private void RequestTowerUpgrade()
+    {
+        TowerBase tower = buildManager != null ? buildManager.SelectedUpgradeTower : null;
+        if (tower == null)
+            return;
+
+        if (tower.TryUpgrade())
+            RefreshUpgradePanel(tower);
+    }
+
     private void OnSelectionChanged(int index)
     {
         if (towerButtons == null || towerButtons.Length == 0)
@@ -263,6 +316,8 @@ public sealed class UIManager : MonoBehaviour
     {
         if (startButton != null)
             startButton.interactable = false;
+        if (upgradePanel != null)
+            upgradePanel.SetActive(false);
 
         if (winPanel != null)
             winPanel.SetActive(won);
