@@ -261,7 +261,14 @@ namespace TowerDefense.EditorTools
             ui.winRestartButton = CreateButton(
                 ui.winPanel.transform, "WinRestart", "Restart",
                 whiteSprite, 38, new Color(0.15f, 0.35f, 0.7f, 1f),
-                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(280f, 90f));
+                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 80f), new Vector2(280f, 80f));
+
+            ui.winMenuButton = CreateButton(
+                ui.winPanel.transform, "WinMenu", "Main Menu",
+                whiteSprite, 34, new Color(0.2f, 0.3f, 0.45f, 1f),
+                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -80f), new Vector2(280f, 80f));
 
             ui.winPanel.SetActive(false);
 
@@ -281,7 +288,14 @@ namespace TowerDefense.EditorTools
             ui.loseRestartButton = CreateButton(
                 ui.losePanel.transform, "LoseRestart", "Restart",
                 whiteSprite, 38, new Color(0.15f, 0.35f, 0.7f, 1f),
-                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(280f, 90f));
+                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 80f), new Vector2(280f, 80f));
+
+            ui.loseMenuButton = CreateButton(
+                ui.losePanel.transform, "LoseMenu", "Main Menu",
+                whiteSprite, 34, new Color(0.2f, 0.3f, 0.45f, 1f),
+                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -80f), new Vector2(280f, 80f));
 
             ui.losePanel.SetActive(false);
         }

@@ -27,8 +27,10 @@ public sealed class UIManager : MonoBehaviour
     [Header("Results")]
     public GameObject winPanel;
     public Button winRestartButton;
+    public Button winMenuButton;
     public GameObject losePanel;
     public Button loseRestartButton;
+    public Button loseMenuButton;
 
     private GameManager gameManager;
     private WaveManager waveManager;
@@ -100,6 +102,10 @@ public sealed class UIManager : MonoBehaviour
             winRestartButton.onClick.AddListener(RestartGame);
         if (loseRestartButton != null)
             loseRestartButton.onClick.AddListener(RestartGame);
+        if (winMenuButton != null)
+            winMenuButton.onClick.AddListener(LoadMainMenu);
+        if (loseMenuButton != null)
+            loseMenuButton.onClick.AddListener(LoadMainMenu);
         if (demolishButton != null)
             demolishButton.onClick.AddListener(buildManager.ToggleDemolishMode);
     }
@@ -241,5 +247,11 @@ public sealed class UIManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void LoadMainMenu()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene("MainMenu");
     }
 }
