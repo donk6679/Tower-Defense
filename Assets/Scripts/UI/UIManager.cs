@@ -58,6 +58,14 @@ public sealed class UIManager : MonoBehaviour
         RefreshAll();
     }
 
+    private void Update()
+    {
+        if (gameManager != null && gameManager.IsGameOver)
+            return;
+
+        RefreshWaveHud();
+    }
+
     private void OnDestroy()
     {
         Unsubscribe();
@@ -68,8 +76,6 @@ public sealed class UIManager : MonoBehaviour
         gameManager.GoldChanged += OnGoldChanged;
         gameManager.LivesChanged += OnLivesChanged;
         gameManager.GameEnded += OnGameEnded;
-        waveManager.WaveBegan += OnWaveBegan;
-        waveManager.WaveCleared += OnWaveCleared;
         buildManager.SelectionChanged += OnSelectionChanged;
         buildManager.DemolishModeChanged += OnDemolishModeChanged;
     }
@@ -82,15 +88,13 @@ public sealed class UIManager : MonoBehaviour
         gameManager.GoldChanged -= OnGoldChanged;
         gameManager.LivesChanged -= OnLivesChanged;
         gameManager.GameEnded -= OnGameEnded;
-        waveManager.WaveBegan -= OnWaveBegan;
-        waveManager.WaveCleared -= OnWaveCleared;
         buildManager.SelectionChanged -= OnSelectionChanged;
         buildManager.DemolishModeChanged -= OnDemolishModeChanged;
     }
 
     private void SetupButtonListeners()
     {
-        startButton.onClick.AddListener(StartNextWave);
+        startButton.onClick.AddListener(RequestEarlyNextWave);
 
         for (int i = 0; i < towerButtons.Length; i++)
         {
@@ -124,7 +128,7 @@ public sealed class UIManager : MonoBehaviour
     {
         OnGoldChanged(gameManager.Gold);
         OnLivesChanged(gameManager.Lives);
-        UpdateWaveStartUI();
+        RefreshWaveHud();
         OnSelectionChanged(-1);
         OnDemolishModeChanged(buildManager.IsDemolishMode);
     }
@@ -141,46 +145,72 @@ public sealed class UIManager : MonoBehaviour
             livesText.text = "Lives: " + lives;
     }
 
-    private void OnWaveBegan(int current, int total)
-    {
-        if (waveText != null)
-            waveText.text = "Wave: " + current + " / " + total;
-
-        if (startButtonText != null)
-            startButtonText.text = "Wave " + current + " in progress...";
-
-        if (startButton != null)
-            startButton.interactable = false;
-    }
-
-    private void OnWaveCleared(int current, int total)
-    {
-        UpdateWaveStartUI();
-    }
-
-    private void UpdateWaveStartUI()
+    private void RefreshWaveHud()
     {
         if (waveManager == null)
             return;
 
-        int nextWave = waveManager.CurrentWaveNumber + 1;
+        int total = waveManager.TotalWaveCount;
+        if (total == 0)
+            return;
 
-        if (waveText != null)
-            waveText.text = "Wave: " + Mathf.Min(nextWave, waveManager.TotalWaveCount) +
-                            " / " + waveManager.TotalWaveCount;
+        if (waveManager.IsWaitingForNextWave)
+        {
+            int nextWave = waveManager.NextWaveNumber;
+            int bonus = waveManager.EstimatedEarlyBonus;
+            float remaining = waveManager.IntermissionRemaining;
 
-        if (startButton != null)
-            startButton.interactable = waveManager.CanStartNextWave;
+            if (startButton != null)
+                startButton.interactable = true;
 
-        if (startButtonText != null)
-            startButtonText.text = waveManager.CanStartNextWave
-                ? "Start Wave " + nextWave
-                : startButtonText.text;
+            if (startButtonText != null)
+                startButtonText.text = "Start Wave " + nextWave + " Now  +" + bonus +
+                                       "g  | auto " + remaining.ToString("0.0") + "s";
+
+            if (waveText != null)
+                waveText.text = "Wave: " + nextWave + " / " + total + "  (ready)";
+        }
+        else if (waveManager.IsSpawningWave)
+        {
+            if (startButton != null)
+                startButton.interactable = false;
+
+            if (startButtonText != null)
+                startButtonText.text = "Wave " + waveManager.CurrentWaveNumber + " spawning...";
+
+            if (waveText != null)
+                waveText.text = "Wave: " + waveManager.CurrentWaveNumber + " / " + total;
+        }
+        else if (waveManager.HasNextWave)
+        {
+            // 游戏刚开始或波次之间的极短过渡
+            if (startButton != null)
+                startButton.interactable = false;
+
+            if (startButtonText != null)
+                startButtonText.text = "Wave " + waveManager.NextWaveNumber + " starting soon...";
+
+            if (waveText != null)
+                waveText.text = "Wave: " + waveManager.NextWaveNumber + " / " + total;
+        }
+        else if (waveManager.AllWavesSpawned)
+        {
+            if (startButton != null)
+                startButton.interactable = false;
+
+            if (startButtonText != null)
+            {
+                startButtonText.text = waveManager.EnemiesAlive > 0
+                    ? "Clearing final wave..."
+                    : "Victory!";
+            }
+        }
     }
 
-    private void StartNextWave()
+    private void RequestEarlyNextWave()
     {
-        waveManager.StartNextWave();
+        if (waveManager == null || !waveManager.RequestImmediateNextWave())
+            Debug.Log("[UI] 当前还不能提前开波");
     }
 
     private void OnSelectionChanged(int index)

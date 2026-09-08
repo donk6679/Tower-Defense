@@ -1,11 +1,13 @@
-using System;
 using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 波次管理器（手动推进）：
-/// 点击 StartNextWave 才开始下一波；一波内敌人全部消失后，
-/// UI 上的“开始下一波”按钮会重新可用。
+/// 波次管理器（自动衔接 + 提前开波奖励）：
+/// 1. 第 1 波在短暂延迟后自动开始；
+/// 2. 每波最后一个敌人生成后进入“准备下一波”倒计时；
+/// 3. 倒计时结束自动开始下一波，不要求上一波敌人被清空；
+/// 4. 倒计时期间玩家可点击按钮立即开波，
+///    并按照剩余倒计时秒数获得金币奖励。
 /// </summary>
 public sealed class WaveManager : MonoBehaviour
 {
@@ -15,30 +17,50 @@ public sealed class WaveManager : MonoBehaviour
     [Header("Wave Config")]
     [SerializeField] private WaveSettings[] waves = new WaveSettings[0];
 
+    [Header("Auto Start Timing")]
+    [SerializeField, Min(0f)] private float firstWaveDelay = 1.5f;
+    [SerializeField, Min(0.5f)] private float nextWaveAutoDelay = 10f;
+    [SerializeField, Min(0f)] private float goldPerRemainingSecond = 2f;
+
     [Header("Runtime Status (read only)")]
     [SerializeField, Min(0)] private int enemiesAlive;
     [SerializeField, Min(0)] private int currentWaveNumber;
 
-    private bool waveInProgress;
+    private bool spawningWave;
+    private bool waitingForNextWave;
+    private bool allWavesSpawned;
+    private bool skipIntermissionRequested;
+    private int nextWaveNumber = 1;
+    private float intermissionRemaining;
 
     public int EnemiesAlive => enemiesAlive;
     public int CurrentWaveNumber => currentWaveNumber;
     public int TotalWaveCount => waves == null ? 0 : waves.Length;
-    public bool AllWavesCleared { get; private set; }
-    public bool CanStartNextWave =>
-        !waveInProgress &&
-        enemiesAlive <= 0 &&
-        currentWaveNumber < TotalWaveCount &&
-        !IsGameOver();
+    public int NextWaveNumber => nextWaveNumber;
+    public float IntermissionRemaining => Mathf.Max(0f, intermissionRemaining);
 
-    /// <summary>参数：当前波号、总波数。</summary>
-    public event Action<int, int> WaveBegan;
-    public event Action<int, int> WaveCleared;
+    public bool IsSpawningWave => spawningWave;
+    public bool IsWaitingForNextWave => waitingForNextWave;
+    public bool HasNextWave => !allWavesSpawned && nextWaveNumber <= TotalWaveCount;
+    public bool AllWavesSpawned => allWavesSpawned;
+    public bool AllWavesCleared { get; private set; }
+
+    public bool CanRequestEarlyNextWave =>
+        waitingForNextWave &&
+        !skipIntermissionRequested &&
+        !IsGameOver() &&
+        HasNextWave;
+
+    public int EstimatedEarlyBonus =>
+        CanRequestEarlyNextWave
+            ? Mathf.RoundToInt(intermissionRemaining * goldPerRemainingSecond)
+            : 0;
 
     public void Setup(PathManager path, WaveSettings[] waveConfigs)
     {
         pathManager = path;
         waves = waveConfigs == null ? new WaveSettings[0] : waveConfigs;
+        nextWaveNumber = 1;
     }
 
     private void Start()
@@ -47,36 +69,101 @@ public sealed class WaveManager : MonoBehaviour
             pathManager = FindObjectOfType<PathManager>();
 
         if (pathManager == null || waves == null || waves.Length == 0)
-            Debug.LogWarning("[WaveManager] 缺少路径或波次配置", this);
-    }
-
-    public void StartNextWave()
-    {
-        if (!CanStartNextWave)
         {
-            Debug.Log("[Wave] 当前不能开始下一波", this);
+            Debug.LogWarning("[WaveManager] 缺少路径或波次配置，无法开始波次", this);
             return;
         }
 
-        waveInProgress = true;
-        currentWaveNumber++;
-        StartCoroutine(RunWave(currentWaveNumber));
+        StartCoroutine(RunWaveFlow());
     }
 
-    private IEnumerator RunWave(int waveNumber)
+    /// <summary>
+    /// 倒计时期间点击“立即开始下一波”：
+    /// 下一波马上到来，并按剩余秒数发金币。
+    /// </summary>
+    public bool RequestImmediateNextWave()
     {
+        if (!CanRequestEarlyNextWave)
+            return false;
+
+        float remaining = IntermissionRemaining;
+        int bonus = Mathf.RoundToInt(remaining * goldPerRemainingSecond);
+
+        if (bonus > 0 && GameManager.Instance != null)
+        {
+            GameManager.Instance.AddGold(bonus);
+            Debug.Log("[Wave] 提前开启下一波，剩余 " +
+                      remaining.ToString("0.0") + " 秒，奖励 " + bonus + " 金币");
+        }
+
+        skipIntermissionRequested = true;
+        return true;
+    }
+
+    private IEnumerator RunWaveFlow()
+    {
+        if (firstWaveDelay > 0f)
+            yield return new WaitForSeconds(firstWaveDelay);
+
+        if (IsGameOver())
+            yield break;
+
+        while (nextWaveNumber <= TotalWaveCount && !IsGameOver())
+        {
+            int waveNumber = nextWaveNumber;
+
+            yield return StartCoroutine(SpawnWave(waveNumber));
+
+            if (IsGameOver())
+                break;
+
+            // 最后一波不需要“准备下一波”倒计时，等待场上敌人全部消失后胜利
+            if (waveNumber >= TotalWaveCount)
+            {
+                allWavesSpawned = true;
+                break;
+            }
+
+            yield return StartCoroutine(RunIntermission(waveNumber));
+
+            if (IsGameOver())
+                break;
+
+            nextWaveNumber++;
+        }
+
+        if (IsGameOver())
+            yield break;
+
+        allWavesSpawned = true;
+
+        // 所有波都已发出：等待场上剩余敌人消失（或被漏到核心导致失败）
+        while (enemiesAlive > 0 && !IsGameOver())
+            yield return null;
+
+        if (IsGameOver())
+            yield break;
+
+        AllWavesCleared = true;
+        Debug.Log("[Wave] 全部波次结束，胜利！");
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.WinGame();
+    }
+
+    private IEnumerator SpawnWave(int waveNumber)
+    {
+        spawningWave = true;
+        currentWaveNumber = waveNumber;
+
         WaveSettings wave = waves[waveNumber - 1];
         int total = TotalWaveCount;
 
-        Debug.Log("[Wave] 第 " + waveNumber + "/" + total + " 波开始");
-        WaveBegan?.Invoke(waveNumber, total);
-
-        if (wave.DelayBeforeWave > 0f)
-            yield return new WaitForSeconds(wave.DelayBeforeWave);
+        Debug.Log("[Wave] 第 " + waveNumber + "/" + total + " 波开始生成");
 
         if (IsGameOver())
         {
-            EndCurrentWave();
+            StopSpawning();
             yield break;
         }
 
@@ -90,7 +177,7 @@ public sealed class WaveManager : MonoBehaviour
             {
                 if (IsGameOver())
                 {
-                    EndCurrentWave();
+                    StopSpawning();
                     yield break;
                 }
 
@@ -101,41 +188,39 @@ public sealed class WaveManager : MonoBehaviour
             }
         }
 
-        // 等待本波敌人全部消失（被消灭或到达核心）
-        while (enemiesAlive > 0)
+        // 注意：最后一个敌人生成后，本协程就结束并进入倒计时，
+        // 不等待敌人被消灭——上一波残余敌人可以与下一波同时在场。
+        StopSpawning();
+    }
+
+    private IEnumerator RunIntermission(int completedWaveNumber)
+    {
+        waitingForNextWave = true;
+        intermissionRemaining = Mathf.Max(0.5f, nextWaveAutoDelay);
+
+        Debug.Log("[Wave] 第 " + completedWaveNumber + " 波已生成完毕，" +
+                  intermissionRemaining.ToString("0.0") +
+                  " 秒后自动开始下一波（可提前开波拿金币）");
+
+        while (intermissionRemaining > 0f && !IsGameOver())
         {
-            if (IsGameOver())
+            if (skipIntermissionRequested)
             {
-                EndCurrentWave();
-                yield break;
+                skipIntermissionRequested = false;
+                break;
             }
 
+            intermissionRemaining -= Time.deltaTime;
             yield return null;
         }
 
-        // 关键：必须在发送 WaveCleared 之前复位“进行中”，
-        // 否则 UI 收到事件时 CanStartNextWave 仍为 false。
-        EndCurrentWave();
-
-        // 最后一波的最后一只敌人若正好触发 Game Over，
-        // 此时 enemiesAlive 已为 0，仍需检查并停止，不广播清除。
-        if (IsGameOver())
-            yield break;
-
-        Debug.Log("[Wave] 第 " + waveNumber + " 波清除");
-        WaveCleared?.Invoke(waveNumber, total);
-
-        if (waveNumber >= total)
-        {
-            AllWavesCleared = true;
-            if (GameManager.Instance != null)
-                GameManager.Instance.WinGame();
-        }
+        skipIntermissionRequested = false;
+        waitingForNextWave = false;
     }
 
-    private void EndCurrentWave()
+    private void StopSpawning()
     {
-        waveInProgress = false;
+        spawningWave = false;
     }
 
     private void SpawnEnemy(Enemy enemyPrefab)
