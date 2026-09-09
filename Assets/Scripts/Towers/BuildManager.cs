@@ -239,6 +239,16 @@ public sealed class BuildManager : MonoBehaviour
         if (slot == null || !slot.isBuildable)
             return;
 
+        // 新交互：由上下文菜单接管，点击地块后由玩家在菜单里选择操作
+        if (TowerContextMenu.Instance != null)
+        {
+            if (GameManager.Instance != null && GameManager.Instance.IsGameOver)
+                return;
+
+            TowerContextMenu.Instance.ShowForSlot(slot);
+            return;
+        }
+
         if (demolishMode)
         {
             TryDemolish(slot);
@@ -255,7 +265,7 @@ public sealed class BuildManager : MonoBehaviour
         TryBuild(slot);
     }
 
-    private void SelectUpgradeTower(TowerBase tower)
+    public void SelectUpgradeTower(TowerBase tower)
     {
         if (selectedUpgradeTower == tower)
             return;
@@ -287,46 +297,63 @@ public sealed class BuildManager : MonoBehaviour
         DemolishModeChanged?.Invoke(demolishMode);
     }
 
-    public void TryBuild(BuildSlot slot)
+    /// <summary>上下文菜单使用：直接按塔类型下标尝试建造。</summary>
+    public bool TryBuildByType(BuildSlot slot, int towerTypeIndex)
     {
         if (slot == null || !slot.isBuildable)
-            return;
+            return false;
 
-        if (GameManager.Instance != null && GameManager.Instance.IsGameOver)
-            return;
+        if (towerTypes == null || towerTypeIndex < 0 || towerTypeIndex >= towerTypes.Length)
+            return false;
 
-        if (demolishMode)
-            return;
+        TowerTypeConfig config = towerTypes[towerTypeIndex];
+        return PerformBuild(slot, config);
+    }
 
+    public void TryBuild(BuildSlot slot)
+    {
         if (!HasSelection)
         {
-            Debug.Log("[Build] 请先选择炮塔（UI 按钮或数字键 1/2/3）");
+            Debug.Log("[Build] 请先选择炮塔");
             return;
         }
+
+        TryBuildByType(slot, selectedIndex);
+    }
+
+    private bool PerformBuild(BuildSlot slot, TowerTypeConfig config)
+    {
+        if (slot == null || !slot.isBuildable)
+            return false;
+
+        if (GameManager.Instance != null && GameManager.Instance.IsGameOver)
+            return false;
+
+        if (demolishMode)
+            return false;
 
         if (slot.IsOccupied)
         {
             Debug.Log("[Build] 该地块已经被占用");
-            return;
+            return false;
         }
 
-        TowerTypeConfig config = towerTypes[selectedIndex];
         if (config == null || config.TowerPrefab == null)
         {
             Debug.LogWarning("[Build] 当前塔类型缺少 Prefab 配置");
-            return;
+            return false;
         }
 
         if (GameManager.Instance == null)
         {
             Debug.LogWarning("[Build] 找不到 GameManager");
-            return;
+            return false;
         }
 
         if (!GameManager.Instance.TrySpendGold(config.Cost))
         {
             Debug.Log("[Build] 金币不足，需要 " + config.Cost + "，当前 " + GameManager.Instance.Gold);
-            return;
+            return false;
         }
 
         if (towerParent == null)
@@ -343,29 +370,36 @@ public sealed class BuildManager : MonoBehaviour
         HideBuildRangePreview();
         slot.PlaceTower(tower, config.Cost);
         Debug.Log("[Build] 建造了 " + config.DisplayName + "，剩余金币 " + GameManager.Instance.Gold, tower);
+        return true;
     }
 
     public void TryDemolish(BuildSlot slot)
     {
-        if (slot == null || !slot.isBuildable)
-            return;
-
         if (!demolishMode)
         {
             Debug.Log("[Build] 当前不在拆除模式");
             return;
         }
 
+        DemolishSlot(slot);
+    }
+
+    /// <summary>上下文菜单使用：不要求先进入拆除模式，直接拆除该地块上的塔。</summary>
+    public bool DemolishSlot(BuildSlot slot)
+    {
+        if (slot == null || !slot.isBuildable)
+            return false;
+
         if (GameManager.Instance == null)
         {
             Debug.LogWarning("[Build] 找不到 GameManager");
-            return;
+            return false;
         }
 
         if (!slot.IsOccupied)
         {
             Debug.Log("[Build] 这个地块上没有塔");
-            return;
+            return false;
         }
 
         TowerBase tower = slot.PlacedTower;
@@ -384,6 +418,7 @@ public sealed class BuildManager : MonoBehaviour
 
         Debug.Log("[Build] 已拆除炮塔（累计投入 " + investedGold +
                   "），返还 " + refund + " 金币，当前 " + GameManager.Instance.Gold);
+        return true;
     }
 
     private Transform FindOrCreateTowerParent()

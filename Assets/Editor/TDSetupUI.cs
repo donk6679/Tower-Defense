@@ -164,11 +164,14 @@ namespace TowerDefense.EditorTools
             UIManager ui = uiRoot.AddComponent<UIManager>();
             Sprite whiteSprite = EnsureWhiteSprite();
 
+            ui.towerButtons = new Button[0];
             BuildHUD(uiRoot.transform, ui);
-            BuildTowerButtons(uiRoot.transform, ui, buildManager, whiteSprite);
             BuildStartButton(uiRoot.transform, ui, whiteSprite);
             BuildUpgradePanel(uiRoot.transform, ui, whiteSprite);
             BuildResultPanels(uiRoot.transform, ui, whiteSprite);
+
+            // 新交互：点击地块后由上下文菜单接管建塔/升级/拆除
+            uiRoot.AddComponent<TowerContextMenu>();
         }
 
         private static void BuildHUD(Transform canvasRoot, UIManager ui)

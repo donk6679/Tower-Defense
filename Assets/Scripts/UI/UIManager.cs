@@ -104,10 +104,13 @@ public sealed class UIManager : MonoBehaviour
     {
         startButton.onClick.AddListener(RequestEarlyNextWave);
 
-        for (int i = 0; i < towerButtons.Length; i++)
+        if (towerButtons != null)
         {
-            int index = i;
-            towerButtons[i].onClick.AddListener(() => buildManager.SelectTower(index));
+            for (int i = 0; i < towerButtons.Length; i++)
+            {
+                int index = i;
+                towerButtons[i].onClick.AddListener(() => buildManager.SelectTower(index));
+            }
         }
 
         if (winRestartButton != null)
@@ -126,10 +129,18 @@ public sealed class UIManager : MonoBehaviour
 
     private void CacheTowerLabels()
     {
+        if (towerButtons == null)
+        {
+            towerButtonLabels = new string[0];
+            return;
+        }
+
         towerButtonLabels = new string[towerButtons.Length];
         for (int i = 0; i < towerButtons.Length; i++)
         {
-            Text label = towerButtons[i].GetComponentInChildren<Text>();
+            Text label = towerButtons[i] != null
+                ? towerButtons[i].GetComponentInChildren<Text>()
+                : null;
             towerButtonLabels[i] = label != null ? label.text : "Tower " + i;
         }
     }
@@ -271,24 +282,24 @@ public sealed class UIManager : MonoBehaviour
 
     private void OnSelectionChanged(int index)
     {
-        if (towerButtons == null || towerButtons.Length == 0)
-            return;
-
-        for (int i = 0; i < towerButtons.Length; i++)
+        if (towerButtons != null)
         {
-            if (towerButtons[i] == null)
-                continue;
+            for (int i = 0; i < towerButtons.Length; i++)
+            {
+                if (towerButtons[i] == null)
+                    continue;
 
-            Image image = towerButtons[i].GetComponent<Image>();
-            if (image != null)
-                image.color = i == index ? SelectedButtonColor : NormalButtonColor;
+                Image image = towerButtons[i].GetComponent<Image>();
+                if (image != null)
+                    image.color = i == index ? SelectedButtonColor : NormalButtonColor;
+            }
         }
 
         if (hintText == null)
             return;
 
         if (index < 0 || towerButtonLabels == null || index >= towerButtonLabels.Length)
-            hintText.text = "Select a tower button, then click a green tile";
+            hintText.text = "Click an empty tile to build, or click a tower to upgrade / remove";
         else
             hintText.text = "Selected: " + towerButtonLabels[index] +
                             "  |  Click a green tile to build (Esc to cancel)";
@@ -311,7 +322,7 @@ public sealed class UIManager : MonoBehaviour
         {
             hintText.text = isActive
                 ? "REMOVE MODE: click an occupied tile to demolish its tower"
-                : "Select a tower button, then click a green tile";
+                : "Click an empty tile to build, or click a tower to upgrade / remove";
         }
     }
 
