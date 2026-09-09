@@ -263,7 +263,10 @@ public sealed class UIManager : MonoBehaviour
             return;
 
         if (tower.TryUpgrade())
+        {
+            buildManager.RefreshSelectedTowerRange();
             RefreshUpgradePanel(tower);
+        }
     }
 
     private void OnSelectionChanged(int index)

@@ -10,6 +10,7 @@ public static class VFXFactory
 
     private static Sprite glowSprite;
     private static Sprite ringSprite;
+    private static Sprite rangeSprite;
 
     public static Sprite GlowSprite
     {
@@ -28,6 +29,16 @@ public static class VFXFactory
             if (ringSprite == null)
                 ringSprite = CreateSprite("VFX_Ring", BuildRingTexture);
             return ringSprite;
+        }
+    }
+
+    public static Sprite RangeSprite
+    {
+        get
+        {
+            if (rangeSprite == null)
+                rangeSprite = CreateSprite("VFX_Range", BuildRangeTexture);
+            return rangeSprite;
         }
     }
 
@@ -88,6 +99,34 @@ public static class VFXFactory
                 float distanceFromRing = Mathf.Abs(radius - 0.36f);
                 float alpha = Mathf.Clamp01(1f - distanceFromRing / 0.07f);
                 pixels[y * TextureSize + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
+    }
+
+    private static Texture2D BuildRangeTexture()
+    {
+        // 半透明填充圆盘 + 外缘亮线，供射程提示使用。
+        // 提示对象 localScale = 2 * range，圆的半径约等于 range。
+        Texture2D texture = new Texture2D(TextureSize, TextureSize, TextureFormat.RGBA32, false);
+        Color[] pixels = new Color[TextureSize * TextureSize];
+
+        for (int y = 0; y < TextureSize; y++)
+        {
+            for (int x = 0; x < TextureSize; x++)
+            {
+                float normalizedX = ((x + 0.5f) / TextureSize - 0.5f) * 2f;
+                float normalizedY = ((y + 0.5f) / TextureSize - 0.5f) * 2f;
+                float radius = Mathf.Sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
+
+                float fillAlpha = 0.22f * Mathf.Clamp01(1f - radius * radius);
+                float ringAlpha = Mathf.Clamp01(1f - Mathf.Abs(radius - 0.96f) / 0.03f) * 0.9f;
+
+                pixels[y * TextureSize + x] =
+                    new Color(1f, 1f, 1f, Mathf.Max(fillAlpha, ringAlpha));
             }
         }
 

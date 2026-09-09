@@ -19,6 +19,12 @@ public sealed class BuildManager : MonoBehaviour
     private Transform towerParent;
     private bool demolishMode;
     private TowerBase selectedUpgradeTower;
+    private BuildSlot hoveredBuildSlot;
+    private GameObject buildRangePreview;
+    private GameObject selectedRangePreview;
+
+    private static readonly Color BuildRangeColor = new Color(0.35f, 1f, 0.7f, 0.6f);
+    private static readonly Color SelectedRangeColor = new Color(0.45f, 0.85f, 1f, 0.7f);
 
     public bool HasSelection => selectedIndex >= 0 && selectedIndex < towerTypes.Length;
     public int SelectedIndex => HasSelection ? selectedIndex : -1;
@@ -101,6 +107,7 @@ public sealed class BuildManager : MonoBehaviour
         ClearUpgradeTowerSelection();
         Debug.Log("[Build] 选择 " + towerTypes[index].DisplayName + "，点击浅绿色地块建造", this);
         SelectionChanged?.Invoke(index);
+        RefreshBuildRangePreview();
     }
 
     public void ClearSelection()
@@ -112,15 +119,115 @@ public sealed class BuildManager : MonoBehaviour
         }
 
         ClearUpgradeTowerSelection();
+        HideBuildRangePreview();
     }
 
     public void ClearUpgradeTowerSelection()
     {
+        HideSelectedRangePreview();
+
         if (selectedUpgradeTower == null)
             return;
 
         selectedUpgradeTower = null;
         UpgradeSelectionChanged?.Invoke(null);
+    }
+
+    /// <summary>鼠标进入/离开建造地块时调用，用于显示建造射程提示。</summary>
+    public void NotifyBuildSlotHover(BuildSlot slot, bool entered)
+    {
+        if (!entered)
+        {
+            if (hoveredBuildSlot == null || slot == null || slot == hoveredBuildSlot)
+                hoveredBuildSlot = null;
+
+            HideBuildRangePreview();
+            return;
+        }
+
+        hoveredBuildSlot = slot;
+        RefreshBuildRangePreview();
+    }
+
+    /// <summary>升级面板升级成功后刷新选中塔的射程圈。</summary>
+    public void RefreshSelectedTowerRange()
+    {
+        if (selectedUpgradeTower != null)
+            ShowSelectedRangePreview(selectedUpgradeTower);
+    }
+
+    private void RefreshBuildRangePreview()
+    {
+        bool canShow =
+            HasSelection &&
+            hoveredBuildSlot != null &&
+            !hoveredBuildSlot.IsOccupied &&
+            !demolishMode &&
+            (GameManager.Instance == null || !GameManager.Instance.IsGameOver);
+
+        if (!canShow)
+        {
+            HideBuildRangePreview();
+            return;
+        }
+
+        TowerTypeConfig config = towerTypes[selectedIndex];
+        if (config == null || config.TowerPrefab == null)
+        {
+            HideBuildRangePreview();
+            return;
+        }
+
+        if (buildRangePreview == null)
+            buildRangePreview = CreateRangePreviewObject();
+
+        buildRangePreview.transform.SetParent(hoveredBuildSlot.transform, false);
+        buildRangePreview.transform.localPosition = Vector3.zero;
+
+        RangeIndicator indicator = buildRangePreview.GetComponent<RangeIndicator>();
+        indicator.Show(config.TowerPrefab.Range, BuildRangeColor);
+    }
+
+    private void HideBuildRangePreview()
+    {
+        if (buildRangePreview != null)
+            buildRangePreview.SetActive(false);
+    }
+
+    private void ShowSelectedRangePreview(TowerBase tower)
+    {
+        if (tower == null)
+        {
+            HideSelectedRangePreview();
+            return;
+        }
+
+        if (selectedRangePreview == null)
+            selectedRangePreview = CreateRangePreviewObject();
+
+        selectedRangePreview.transform.SetParent(tower.transform, false);
+        selectedRangePreview.transform.localPosition = Vector3.zero;
+
+        RangeIndicator indicator = selectedRangePreview.GetComponent<RangeIndicator>();
+        indicator.Show(tower.Range, SelectedRangeColor);
+    }
+
+    private void HideSelectedRangePreview()
+    {
+        if (selectedRangePreview != null)
+            selectedRangePreview.SetActive(false);
+    }
+
+    private GameObject CreateRangePreviewObject()
+    {
+        GameObject preview = new GameObject("RangeIndicator");
+
+        SpriteRenderer renderer = preview.AddComponent<SpriteRenderer>();
+        renderer.sprite = VFXFactory.RangeSprite;
+        renderer.sortingOrder = 4;
+
+        preview.AddComponent<RangeIndicator>();
+        return preview;
     }
 
     /// <summary>
@@ -140,6 +247,7 @@ public sealed class BuildManager : MonoBehaviour
 
         if (slot.IsOccupied)
         {
+            HideBuildRangePreview();
             SelectUpgradeTower(slot.HasTower ? slot.PlacedTower : null);
             return;
         }
@@ -153,6 +261,7 @@ public sealed class BuildManager : MonoBehaviour
             return;
 
         selectedUpgradeTower = tower;
+        ShowSelectedRangePreview(tower);
         UpgradeSelectionChanged?.Invoke(tower);
     }
 
@@ -231,6 +340,7 @@ public sealed class BuildManager : MonoBehaviour
 
         tower.SetInitialCost(config.Cost);
         ClearUpgradeTowerSelection();
+        HideBuildRangePreview();
         slot.PlaceTower(tower, config.Cost);
         Debug.Log("[Build] 建造了 " + config.DisplayName + "，剩余金币 " + GameManager.Instance.Gold, tower);
     }

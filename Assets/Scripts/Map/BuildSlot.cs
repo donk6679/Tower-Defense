@@ -74,6 +74,18 @@ public sealed class BuildSlot : MonoBehaviour
             BuildManager.Instance.OnBuildSlotClicked(this);
     }
 
+    private void OnMouseEnter()
+    {
+        if (BuildManager.Instance != null)
+            BuildManager.Instance.NotifyBuildSlotHover(this, true);
+    }
+
+    private void OnMouseExit()
+    {
+        if (BuildManager.Instance != null)
+            BuildManager.Instance.NotifyBuildSlotHover(this, false);
+    }
+
     private void OnDrawGizmos()
     {
         if (!isBuildable)

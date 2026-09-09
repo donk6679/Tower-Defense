@@ -11604,7 +11604,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 86
     m_Alignment: 3
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -14472,8 +14472,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41bca625f2f5a154686789159b35efa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startingLives: 20
-  startingGold: 200
+  startingLives: 10
+  startingGold: 120
 --- !u!4 &654327953
 Transform:
   m_ObjectHideFlags: 0
@@ -41624,7 +41624,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 86
     m_Alignment: 3
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -47333,8 +47333,8 @@ MonoBehaviour:
       spawnInterval: 2.2
     delayBeforeWave: 2
     delayAfterWave: 3
-  firstWaveDelay: 1.5
-  nextWaveAutoDelay: 10
+  firstWaveDelay: 3
+  nextWaveAutoDelay: 8
   goldPerRemainingSecond: 2
   enemiesAlive: 0
   currentWaveNumber: 0
