@@ -79,6 +79,11 @@ public sealed class TowerContextMenu : MonoBehaviour
         if (!Input.GetMouseButtonDown(0))
             return;
 
+        // 鼠标按在菜单本身的图标/背景上时不要关闭，
+        // 否则会在按钮 onClick（鼠标抬起）之前把按钮销毁掉。
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            return;
+
         if (TryGetMouseBuildSlot() != null)
             return;
 
@@ -139,8 +144,8 @@ public sealed class TowerContextMenu : MonoBehaviour
             int index = i;
             button.onClick.AddListener(() =>
             {
-                Hide();
                 buildManager.TryBuildByType(slot, index);
+                Hide();
             });
         }
     }
@@ -153,16 +158,16 @@ public sealed class TowerContextMenu : MonoBehaviour
         Button upgradeButton = CreateIconButton(ArrowSprite, new Color(0.6f, 1f, 0.7f, 1f));
         upgradeButton.onClick.AddListener(() =>
         {
-            Hide();
             tower.TryUpgrade();
+            Hide();
         });
 
         // 拆除：叉号
         Button demolishButton = CreateIconButton(CrossSprite, new Color(1f, 0.4f, 0.35f, 1f));
         demolishButton.onClick.AddListener(() =>
         {
-            Hide();
             buildManager.DemolishSlot(slot);
+            Hide();
         });
     }
 
