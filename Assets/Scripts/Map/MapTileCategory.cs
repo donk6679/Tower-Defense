@@ -20,4 +20,5 @@ public enum MapTileCategory
     OuterCornerBottomLeft,           // 外侧拐角：地块位于拐角左下角
     OuterCornerBottomRight,          // 外侧拐角：地块位于拐角右下角
     Road,                            // 道路本身
+    Border,                          // 主地图外的纯色填充地块（不可建造）
 }

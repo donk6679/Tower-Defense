@@ -35,7 +35,7 @@ namespace TowerDefense.EditorTools
             EditorUtility.DisplayDialog(
                 ok ? "TD Tower Upgrades" : "TD Tower Upgrades - Error",
                 ok
-                    ? "三座炮塔的 1~3 级数据已写入 Prefab。\n\n" +
+                    ? "三座炮塔的 1~2 级数据已写入 Prefab。\n\n" +
                       "运行 Setup UI & 8 Manual Waves 刷新升级面板后，\n" +
                       "点击场上已有炮塔即可升级。"
                     : "部分 Prefab 未找到，请先运行 Setup 3 Towers & 3 Enemies。",
@@ -64,34 +64,31 @@ namespace TowerDefense.EditorTools
             return true;
         }
 
-        private static TowerLevelStats[] BuildGunLevels()
+        public static TowerLevelStats[] BuildGunLevels()
         {
             return new[]
             {
                 new TowerLevelStats(3f, 5, 2f, 1f, 0f, 0),
                 new TowerLevelStats(3f, 8, 2f, 1f, 0f, 70),
-                new TowerLevelStats(3f, 12, 2f, 1f, 0f, 80),
             };
         }
 
-        private static TowerLevelStats[] BuildFrostLevels()
+        public static TowerLevelStats[] BuildFrostLevels()
         {
             return new[]
             {
-                // 减速倍率：0.6 = 减速 40%，0.45 = 减速 55%，0.3 = 减速 70%
+                // 减速倍率：0.6 = 减速 40%，0.45 = 减速 55%
                 new TowerLevelStats(2.5f, 3, 1.5f, 0.6f, 2f, 0),
                 new TowerLevelStats(2.5f, 3, 1.5f, 0.45f, 3f, 90),
-                new TowerLevelStats(2.5f, 3, 1.5f, 0.3f, 4f, 105),
             };
         }
 
-        private static TowerLevelStats[] BuildSniperLevels()
+        public static TowerLevelStats[] BuildSniperLevels()
         {
             return new[]
             {
                 new TowerLevelStats(5f, 20, 0.5f, 1f, 0f, 0),
                 new TowerLevelStats(6.2f, 35, 0.5f, 1f, 0f, 130),
-                new TowerLevelStats(7.5f, 55, 0.5f, 1f, 0f, 150),
             };
         }
     }

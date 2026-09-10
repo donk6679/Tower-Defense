@@ -29,6 +29,10 @@ public sealed class MapTileSpriteConfig : ScriptableObject
     [Header("Road")]
     public Sprite roadSprite;
 
+    [Header("Border (outside the playable map)")]
+    [Tooltip("主地图外围的纯色填充地块贴图；留空则回退到 tileNone。")]
+    public Sprite tileBorder;
+
     [Header("Buildable Overlay")]
     [Tooltip("是否给可建造地块叠加一层半透明高亮，避免换素材后看不出哪里能建塔。")]
     public bool showBuildableOverlay = true;

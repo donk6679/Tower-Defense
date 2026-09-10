@@ -23,6 +23,12 @@ public sealed class TowerContextMenu : MonoBehaviour
     private static Sprite whiteSprite;
     private static Sprite arrowSprite;
     private static Sprite crossSprite;
+    private static Sprite gunBuildIcon;
+    private static Sprite frostBuildIcon;
+    private static Sprite sniperBuildIcon;
+    private static Sprite upgradeActionIcon;
+    private static Sprite maxLevelActionIcon;
+    private static Sprite demolishActionIcon;
 
     private static Sprite WhiteSprite
     {
@@ -137,9 +143,10 @@ public sealed class TowerContextMenu : MonoBehaviour
             if (config == null || config.TowerPrefab == null)
                 continue;
 
-            Button button = CreateIconButton(
-                VFXFactory.GlowSprite,
-                GetTowerColor(config.TowerPrefab));
+            Sprite buildIcon = GetBuildIcon(config.TowerPrefab);
+            Button button = buildIcon != null
+                ? CreateIconButton(buildIcon, Color.white, true)
+                : CreateIconButton(VFXFactory.GlowSprite, GetTowerColor(config.TowerPrefab));
 
             int index = i;
             button.onClick.AddListener(() =>
@@ -153,17 +160,44 @@ public sealed class TowerContextMenu : MonoBehaviour
     private void AddTowerActions(BuildSlot slot)
     {
         TowerBase tower = slot.PlacedTower;
-
-        // 升级：上箭头
-        Button upgradeButton = CreateIconButton(ArrowSprite, new Color(0.6f, 1f, 0.7f, 1f));
-        upgradeButton.onClick.AddListener(() =>
+        if (tower == null)
         {
-            tower.TryUpgrade();
             Hide();
-        });
+            return;
+        }
 
-        // 拆除：叉号
-        Button demolishButton = CreateIconButton(CrossSprite, new Color(1f, 0.4f, 0.35f, 1f));
+        bool isMaxLevel = tower.CurrentLevel >= tower.MaxLevel;
+
+        // 升级：普通时黄色上箭头，满级时灰色上箭头且不可点击
+        Sprite upgradeSprite = isMaxLevel
+            ? LoadActionIcon(ref maxLevelActionIcon, "max_level")
+            : LoadActionIcon(ref upgradeActionIcon, "upgrade");
+
+        Button upgradeButton = upgradeSprite != null
+            ? CreateIconButton(upgradeSprite, Color.white, true)
+            : CreateIconButton(
+                ArrowSprite,
+                isMaxLevel ? new Color(0.6f, 0.6f, 0.6f, 1f) : new Color(0.95f, 0.85f, 0.3f, 1f));
+
+        if (isMaxLevel)
+        {
+            upgradeButton.interactable = false;
+        }
+        else
+        {
+            upgradeButton.onClick.AddListener(() =>
+            {
+                tower.TryUpgrade();
+                Hide();
+            });
+        }
+
+        // 拆除：红色叉号
+        Sprite demolishSprite = LoadActionIcon(ref demolishActionIcon, "demolish");
+        Button demolishButton = demolishSprite != null
+            ? CreateIconButton(demolishSprite, Color.white, true)
+            : CreateIconButton(CrossSprite, new Color(1f, 0.4f, 0.35f, 1f));
+
         demolishButton.onClick.AddListener(() =>
         {
             buildManager.DemolishSlot(slot);
@@ -171,7 +205,40 @@ public sealed class TowerContextMenu : MonoBehaviour
         });
     }
 
-    private Button CreateIconButton(Sprite iconSprite, Color iconColor)
+    private static Sprite LoadActionIcon(ref Sprite cache, string iconName)
+    {
+        if (cache == null)
+            cache = Resources.Load<Sprite>("UiIcons/" + iconName);
+        return cache;
+    }
+
+    private static Sprite GetBuildIcon(TowerBase towerPrefab)
+    {
+        if (towerPrefab is GunTower)
+        {
+            if (gunBuildIcon == null)
+                gunBuildIcon = Resources.Load<Sprite>("TowerIcons/gun_lv1");
+            return gunBuildIcon;
+        }
+
+        if (towerPrefab is FrostTower)
+        {
+            if (frostBuildIcon == null)
+                frostBuildIcon = Resources.Load<Sprite>("TowerIcons/frost_lv1");
+            return frostBuildIcon;
+        }
+
+        if (towerPrefab is SniperTower)
+        {
+            if (sniperBuildIcon == null)
+                sniperBuildIcon = Resources.Load<Sprite>("TowerIcons/sniper_lv1");
+            return sniperBuildIcon;
+        }
+
+        return null;
+    }
+
+    private Button CreateIconButton(Sprite iconSprite, Color iconColor, bool preserveAspect = false)
     {
         GameObject buttonObject = new GameObject("ContextIcon", typeof(RectTransform));
         buttonObject.transform.SetParent(menuRect, false);
@@ -183,6 +250,7 @@ public sealed class TowerContextMenu : MonoBehaviour
         icon.sprite = iconSprite;
         icon.color = iconColor;
         icon.type = Image.Type.Simple;
+        icon.preserveAspect = preserveAspect;
 
         LayoutElement layoutElement = buttonObject.AddComponent<LayoutElement>();
         layoutElement.preferredWidth = ButtonSize;

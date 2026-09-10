@@ -17,20 +17,11 @@ public sealed class BuildSlot : MonoBehaviour
 
     private TowerBase placedTower;
     private int towerCost;
-    private SpriteRenderer spriteRenderer;
-    private Color normalColor = Color.white;
 
     public bool IsOccupied => occupied;
     public bool HasTower => placedTower != null;
     public TowerBase PlacedTower => placedTower;
     public int TowerCost => towerCost;
-
-    private void Awake()
-    {
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        if (spriteRenderer != null)
-            normalColor = spriteRenderer.color;
-    }
 
     public void PlaceTower(TowerBase tower, int cost)
     {
@@ -52,13 +43,7 @@ public sealed class BuildSlot : MonoBehaviour
     private void SetOccupied(bool value)
     {
         occupied = value;
-
-        if (spriteRenderer == null)
-            return;
-
-        spriteRenderer.color = value
-            ? new Color(0.55f, 0.55f, 0.55f, 0.75f)
-            : normalColor;
+        // 地块外观保持不变，避免炮塔周围出现一圈变暗的"阴影"。
     }
 
     private void OnMouseDown()

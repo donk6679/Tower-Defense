@@ -16,7 +16,14 @@ public sealed class RangeIndicator : MonoBehaviour
     public void Show(float range, Color color)
     {
         gameObject.SetActive(true);
-        transform.localScale = Vector3.one * Mathf.Max(0.1f, range * 2f);
+
+        // 父级（炮塔）可能被整体放大，这里抵消父级缩放，
+        // 保证射程圈的世界半径始终等于 range。
+        float parentScale = 1f;
+        if (transform.parent != null)
+            parentScale = Mathf.Max(0.0001f, Mathf.Abs(transform.parent.lossyScale.x));
+
+        transform.localScale = Vector3.one * Mathf.Max(0.1f, range * 2f / parentScale);
 
         if (spriteRenderer != null)
             spriteRenderer.color = color;

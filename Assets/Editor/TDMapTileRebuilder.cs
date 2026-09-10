@@ -151,6 +151,12 @@ namespace TowerDefense.EditorTools
                 }
             }
 
+            int borderTileCount = CreateBorderTiles(
+                mapRoot.transform,
+                config,
+                groundFallback);
+            counts[MapTileCategory.Border] = borderTileCount;
+
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
             AssetDatabase.SaveAssets();
@@ -200,6 +206,7 @@ namespace TowerDefense.EditorTools
             changed |= Assign(config.tileOuterCornerBottomRight, "117", overwrite, ref config.tileOuterCornerBottomRight);
 
             changed |= Assign(config.roadSprite, "050", overwrite, ref config.roadSprite);
+            changed |= Assign(config.tileBorder, "124", overwrite, ref config.tileBorder);
 
             // 配置里可能被手动换成了别的地砖（例如 tile124 / tile158），
             // 这里统一校正所有被引用素材的 PPU，避免尺寸不一致。
@@ -231,6 +238,7 @@ namespace TowerDefense.EditorTools
             NormalizeSprite(config.tileOuterCornerBottomRight);
 
             NormalizeSprite(config.roadSprite);
+            NormalizeSprite(config.tileBorder);
         }
 
         private static void NormalizeSprite(Sprite sprite)
@@ -435,6 +443,102 @@ namespace TowerDefense.EditorTools
             DestroyChild(mapRoot, "GroundTiles");
             DestroyChild(mapRoot, "PathTiles");
             DestroyChild(mapRoot, "BuildSlots");
+            DestroyChild(mapRoot, "BorderTiles");
+        }
+
+        /// <summary>
+        /// 在主地图外生成若干圈纯色地块，覆盖当前摄像机可见范围，
+        /// 避免看到摄像机背景（灰色）。边缘地块没有 BuildSlot，不能建造。
+        /// </summary>
+        private static int CreateBorderTiles(
+            Transform mapRoot,
+            MapTileSpriteConfig config,
+            Sprite fallbackSprite)
+        {
+            Sprite sprite = null;
+            if (config != null && config.tileBorder != null)
+                sprite = config.tileBorder;
+            else if (config != null && config.tileNone != null)
+                sprite = config.tileNone;
+            else
+                sprite = fallbackSprite;
+
+            if (sprite == null)
+                return 0;
+
+            GetBorderRings(out int left, out int right, out int top, out int bottom);
+            Transform borderRoot = CreateChild(mapRoot, "BorderTiles");
+            int count = 0;
+
+            for (int row = -top; row <= Rows - 1 + bottom; row++)
+            {
+                for (int col = -left; col <= Cols - 1 + right; col++)
+                {
+                    // 主地图区域已经生成过地块
+                    if (col >= 0 && col < Cols && row >= 0 && row < Rows)
+                        continue;
+
+                    GameObject tile = new GameObject("Border_" + col + "_" + row);
+                    tile.transform.SetParent(borderRoot, false);
+                    tile.transform.localPosition = WorldPosition(col, row);
+
+                    SpriteRenderer renderer = tile.AddComponent<SpriteRenderer>();
+                    renderer.sprite = sprite;
+                    renderer.color = Color.white;
+                    renderer.sortingOrder = 0;
+
+                    MapTileVisual visual = tile.AddComponent<MapTileVisual>();
+                    visual.category = MapTileCategory.Border;
+                    visual.gridCoord = new Vector2Int(col, row);
+
+                    count++;
+                }
+            }
+
+            Debug.Log("[TD Map Tiles] 地图外补充 " + count +
+                      " 块纯色地块（左 " + left + "，右 " + right +
+                      "，上 " + top + "，下 " + bottom + "）");
+            return count;
+        }
+
+        /// <summary>
+        /// 根据摄像机的可见世界范围计算四边需要补多少圈，
+        /// 并额外多补 1 圈作为安全余量。
+        /// </summary>
+        private static void GetBorderRings(
+            out int left,
+            out int right,
+            out int top,
+            out int bottom)
+        {
+            left = 2;
+            right = 2;
+            top = 2;
+            bottom = 2;
+
+            Camera camera = Camera.main;
+            if (camera == null || !camera.orthographic)
+                return;
+
+            float halfHeight = camera.orthographicSize;
+            float halfWidth = halfHeight * camera.aspect;
+            Vector3 position = camera.transform.position;
+
+            float visibleMinX = position.x - halfWidth;
+            float visibleMaxX = position.x + halfWidth;
+            float visibleMinY = position.y - halfHeight;
+            float visibleMaxY = position.y + halfHeight;
+
+            // 世界坐标 → 网格坐标：x = col + 0.5, y = -(row + 0.5)
+            int minCol = Mathf.FloorToInt(visibleMinX - 0.5f);
+            int maxCol = Mathf.CeilToInt(visibleMaxX - 0.5f);
+            int topRow = Mathf.FloorToInt(-visibleMaxY - 0.5f);
+            int bottomRow = Mathf.CeilToInt(-visibleMinY - 0.5f);
+
+            left = Mathf.Max(left, -minCol + 1);
+            right = Mathf.Max(right, maxCol - (Cols - 1) + 1);
+            top = Mathf.Max(top, -topRow + 1);
+            bottom = Mathf.Max(bottom, bottomRow - (Rows - 1) + 1);
         }
 
         private static void DestroyChild(Transform parent, string childName)

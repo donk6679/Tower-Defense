@@ -2,9 +2,8 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 炮塔基类：周期性在射程内寻找目标并发射追踪子弹。
-/// 支持 3 级升级：每个等级独立配置射程/伤害/攻速，
-/// 冰霜塔通过 FrostTower 额外使用每级的减速参数。
+/// 炮塔基类：持续锁定射程内最接近终点的敌人，炮口朝向目标，
+/// 冷却结束后发射追踪子弹。升级等级数量由 TowerLevelStats 决定。
 /// </summary>
 public class TowerBase : MonoBehaviour
 {
@@ -13,6 +12,12 @@ public class TowerBase : MonoBehaviour
 
     [Header("Levels")]
     [SerializeField] private TowerLevelStats[] levelStats = new TowerLevelStats[0];
+
+    [Header("Aiming & Visual")]
+    [Tooltip("炮口默认朝向与 +X 轴的夹角补偿：图标朝上填 -90，朝右填 0。")]
+    [SerializeField] private float aimAngleOffset = -90f;
+    [SerializeField, Min(0f)] private float turnSpeed = 720f;
+    [SerializeField] private Sprite[] levelSprites = new Sprite[0];
 
     [Header("Combat (fallback when no level data)")]
     [SerializeField, Min(0.1f)] private float range = 3f;
@@ -24,6 +29,8 @@ public class TowerBase : MonoBehaviour
     private int currentLevel = 1;
     private float attackCooldown;
     private int totalInvestedGold;
+    private Enemy currentTarget;
+    private SpriteRenderer bodyRenderer;
 
     public string DisplayName => displayName;
     public int CurrentLevel => currentLevel;
@@ -31,6 +38,12 @@ public class TowerBase : MonoBehaviour
     public int MaxLevel => levelStats == null || levelStats.Length == 0 ? 1 : levelStats.Length;
     public bool CanUpgrade => currentLevel < MaxLevel && !IsGameOver();
     public int NextUpgradeCost => CanUpgrade ? levelStats[currentLevel].upgradeCost : 0;
+
+    private void Awake()
+    {
+        bodyRenderer = GetComponent<SpriteRenderer>();
+        ApplyLevelSprite();
+    }
 
     protected TowerLevelStats CurrentLevelStats
     {
@@ -71,12 +84,26 @@ public class TowerBase : MonoBehaviour
         projectilePrefab = newProjectile;
     }
 
-    /// <summary>编辑器配置升级档案：显示名 + 1~3 级完整数据。</summary>
+    /// <summary>编辑器配置升级档案：显示名 + 每级完整数据。</summary>
     public void SetUpgradeProfile(string towerName, TowerLevelStats[] levels)
     {
         displayName = towerName;
         levelStats = levels == null ? new TowerLevelStats[0] : levels;
         currentLevel = 1;
+    }
+
+    /// <summary>编辑器配置：炮口朝向补偿与转向速度。</summary>
+    public void SetAimSettings(float angleOffset, float degreesPerSecond)
+    {
+        aimAngleOffset = angleOffset;
+        turnSpeed = Mathf.Max(0f, degreesPerSecond);
+    }
+
+    /// <summary>编辑器配置：1 级、2 级……对应的场内外观。</summary>
+    public void SetLevelSprites(Sprite[] sprites)
+    {
+        levelSprites = sprites == null ? new Sprite[0] : sprites;
+        ApplyLevelSprite();
     }
 
     /// <summary>建造完成时记录造价，用于拆除返还时累计已投入金币。</summary>
@@ -108,6 +135,7 @@ public class TowerBase : MonoBehaviour
 
         totalInvestedGold += next.upgradeCost;
         currentLevel++;
+        ApplyLevelSprite();
         Debug.Log("[Tower] " + displayName + " 升级到 Lv" + currentLevel +
                   "，剩余金币 " + GameManager.Instance.Gold, this);
         return true;
@@ -143,22 +171,75 @@ public class TowerBase : MonoBehaviour
 
     private void Update()
     {
-        if (projectilePrefab == null)
+        if (IsGameOver())
             return;
 
-        if (IsGameOver())
+        AcquireTarget();
+        AimAtCurrentTarget();
+
+        if (projectilePrefab == null || currentTarget == null)
             return;
 
         attackCooldown -= Time.deltaTime;
         if (attackCooldown > 0f)
             return;
 
-        Enemy target = FindTarget();
-        if (target == null)
+        attackCooldown = 1f / Mathf.Max(FireRate, 0.05f);
+        FireAt(currentTarget);
+    }
+
+    /// <summary>
+    /// 保持当前目标直到它死亡或离开射程，再重新寻找，
+    /// 避免炮口在多个敌人之间来回摆动。
+    /// </summary>
+    private void AcquireTarget()
+    {
+        if (currentTarget != null && !currentTarget.IsDead && IsInRange(currentTarget))
             return;
 
-        attackCooldown = 1f / Mathf.Max(FireRate, 0.05f);
-        FireAt(target);
+        currentTarget = FindTarget();
+    }
+
+    private bool IsInRange(Enemy enemy)
+    {
+        if (enemy == null)
+            return false;
+
+        return Vector3.Distance(transform.position, enemy.transform.position) <= Range;
+    }
+
+    private void AimAtCurrentTarget()
+    {
+        if (currentTarget == null)
+            return;
+
+        Vector3 direction = currentTarget.transform.position - transform.position;
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + aimAngleOffset;
+        Quaternion targetRotation = Quaternion.Euler(0f, 0f, angle);
+
+        if (turnSpeed <= 0f)
+            transform.rotation = targetRotation;
+        else
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation,
+                targetRotation,
+                turnSpeed * Time.deltaTime);
+    }
+
+    private void ApplyLevelSprite()
+    {
+        if (bodyRenderer == null)
+            bodyRenderer = GetComponent<SpriteRenderer>();
+
+        if (bodyRenderer == null || levelSprites == null || levelSprites.Length == 0)
+            return;
+
+        int index = Mathf.Clamp(currentLevel - 1, 0, levelSprites.Length - 1);
+        if (levelSprites[index] != null)
+            bodyRenderer.sprite = levelSprites[index];
     }
 
     /// <summary>
