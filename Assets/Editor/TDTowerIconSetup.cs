@@ -17,6 +17,7 @@ namespace TowerDefense.EditorTools
         {
             "Assets/Resources/TowerIcons",
             "Assets/Resources/UiIcons",
+            "Assets/Resources/HudIcons",
         };
 
         private static readonly string[] ExpectedFiles =
@@ -30,6 +31,21 @@ namespace TowerDefense.EditorTools
             "UiIcons/upgrade.png",
             "UiIcons/demolish.png",
             "UiIcons/max_level.png",
+            "HudIcons/gold.png",
+            "HudIcons/life.png",
+            "HudIcons/wave.png",
+            "HudIcons/colon.png",
+            "HudIcons/slash.png",
+            "HudIcons/digit_0.png",
+            "HudIcons/digit_1.png",
+            "HudIcons/digit_2.png",
+            "HudIcons/digit_3.png",
+            "HudIcons/digit_4.png",
+            "HudIcons/digit_5.png",
+            "HudIcons/digit_6.png",
+            "HudIcons/digit_7.png",
+            "HudIcons/digit_8.png",
+            "HudIcons/digit_9.png",
         };
 
         [MenuItem("Tools/Tower Defense/Tower Icons/Setup Icon Import Settings", priority = 25)]

@@ -176,25 +176,101 @@ namespace TowerDefense.EditorTools
 
         private static void BuildHUD(Transform canvasRoot, UIManager ui)
         {
-            ui.goldText = CreateScreenText(
-                canvasRoot, "GoldText", "Gold: 200",
-                36, new Color(1f, 0.9f, 0.35f),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -30f), new Vector2(400f, 46f));
+            RectTransform hudRoot = CreateRect(canvasRoot, "HudPanel");
+            hudRoot.anchorMin = new Vector2(0f, 1f);
+            hudRoot.anchorMax = new Vector2(0f, 1f);
+            hudRoot.pivot = new Vector2(0f, 1f);
+            hudRoot.anchoredPosition = new Vector2(24f, -20f);
+            hudRoot.sizeDelta = new Vector2(520f, 220f);
 
-            ui.livesText = CreateScreenText(
-                canvasRoot, "LivesText", "Lives: 20",
-                36, new Color(1f, 0.55f, 0.45f),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -86f), new Vector2(400f, 46f));
+            VerticalLayoutGroup hudLayout = hudRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+            hudLayout.spacing = 26f;
+            hudLayout.childAlignment = TextAnchor.UpperLeft;
+            hudLayout.childControlWidth = true;
+            hudLayout.childControlHeight = true;
+            hudLayout.childForceExpandWidth = false;
+            hudLayout.childForceExpandHeight = false;
 
-            ui.waveText = CreateScreenText(
-                canvasRoot, "WaveText", "Wave: 1 / 8",
-                36, Color.white,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -142f), new Vector2(400f, 46f));
+            Sprite goldSprite = LoadHudSprite("gold");
+            Sprite lifeSprite = LoadHudSprite("life");
+            Sprite waveSprite = LoadHudSprite("wave");
+            Sprite colonSprite = LoadHudSprite("colon");
+            Sprite slashSprite = LoadHudSprite("slash");
 
-            ui.hintText = CreateScreenText(
-                canvasRoot, "HintText", "Select a tower button, then click a green tile",
-                24, new Color(0.85f, 0.9f, 1f, 1f),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -200f), new Vector2(720f, 40f));
+            // Gold: [icon] : [number]
+            RectTransform goldRow = CreateHudRow(hudRoot, "GoldRow", 78f);
+            ui.goldIcon = CreateHudIcon(goldRow, "GoldIcon", goldSprite, 104f);
+            ui.goldColon = CreateHudIcon(goldRow, "GoldColon", colonSprite, 80f);
+            ui.goldNumber = CreateHudNumber(goldRow, "GoldNumber", 184f);
+
+            // Lives: [icon] : [number]
+            RectTransform lifeRow = CreateHudRow(hudRoot, "LifeRow", 78f);
+            ui.lifeIcon = CreateHudIcon(lifeRow, "LifeIcon", lifeSprite, 104f);
+            ui.lifeColon = CreateHudIcon(lifeRow, "LifeColon", colonSprite, 80f);
+            ui.lifeNumber = CreateHudNumber(lifeRow, "LifeNumber", 184f);
+
+            // Wave: [icon] [current] / [total]
+            RectTransform waveRow = CreateHudRow(hudRoot, "WaveRow", 78f);
+            ui.waveIcon = CreateHudIcon(waveRow, "WaveIcon", waveSprite, 104f);
+            ui.waveCurrentNumber = CreateHudNumber(waveRow, "WaveCurrentNumber", 184f);
+            ui.waveSlash = CreateHudIcon(waveRow, "WaveSlash", slashSprite, 120f);
+            ui.waveTotalNumber = CreateHudNumber(waveRow, "WaveTotalNumber", 184f);
+        }
+
+        private static RectTransform CreateHudRow(Transform parent, string name, float height)
+        {
+            RectTransform row = CreateRect(parent, name);
+
+            LayoutElement element = row.gameObject.AddComponent<LayoutElement>();
+            element.preferredHeight = height;
+            element.minHeight = height;
+
+            HorizontalLayoutGroup layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = -16f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            return row;
+        }
+
+        private static Image CreateHudIcon(Transform parent, string name, Sprite sprite, float size)
+        {
+            RectTransform rect = CreateRect(parent, name);
+
+            LayoutElement element = rect.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = size;
+            element.preferredHeight = size;
+            element.minHeight = size;
+
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static HudSpriteNumber CreateHudNumber(Transform parent, string name, float height)
+        {
+            RectTransform rect = CreateRect(parent, name);
+
+            LayoutElement element = rect.gameObject.AddComponent<LayoutElement>();
+            element.preferredHeight = height;
+            element.minHeight = height;
+
+            HudSpriteNumber number = rect.gameObject.AddComponent<HudSpriteNumber>();
+            number.digitHeight = height;
+            number.spacing = -6f;
+            number.digitWidthRatio = 0.55f;
+            return number;
+        }
+
+        private static Sprite LoadHudSprite(string spriteName)
+        {
+            return AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/Resources/HudIcons/" + spriteName + ".png");
         }
 
         private static void BuildTowerButtons(

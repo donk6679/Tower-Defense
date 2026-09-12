@@ -15,6 +15,18 @@ public sealed class UIManager : MonoBehaviour
     public Text waveText;
     public Text hintText;
 
+    [Header("HUD Sprite Elements")]
+    public Image goldIcon;
+    public Image goldColon;
+    public HudSpriteNumber goldNumber;
+    public Image lifeIcon;
+    public Image lifeColon;
+    public HudSpriteNumber lifeNumber;
+    public Image waveIcon;
+    public Image waveSlash;
+    public HudSpriteNumber waveCurrentNumber;
+    public HudSpriteNumber waveTotalNumber;
+
     [Header("Tower Buttons")]
     public Button[] towerButtons;
     public Button demolishButton;
@@ -159,6 +171,9 @@ public sealed class UIManager : MonoBehaviour
         if (goldText != null)
             goldText.text = "Gold: " + gold;
 
+        if (goldNumber != null)
+            goldNumber.SetNumber(gold);
+
         if (upgradePanel != null && upgradePanel.activeSelf && buildManager != null)
             RefreshUpgradePanel(buildManager.SelectedUpgradeTower);
     }
@@ -167,6 +182,9 @@ public sealed class UIManager : MonoBehaviour
     {
         if (livesText != null)
             livesText.text = "Lives: " + lives;
+
+        if (lifeNumber != null)
+            lifeNumber.SetNumber(lives);
     }
 
     private void RefreshWaveHud()
@@ -193,6 +211,8 @@ public sealed class UIManager : MonoBehaviour
 
             if (waveText != null)
                 waveText.text = "Wave: " + nextWave + " / " + total + "  (ready)";
+
+            SetWaveNumbers(nextWave, total);
         }
         else if (waveManager.IsSpawningWave)
         {
@@ -204,6 +224,8 @@ public sealed class UIManager : MonoBehaviour
 
             if (waveText != null)
                 waveText.text = "Wave: " + waveManager.CurrentWaveNumber + " / " + total;
+
+            SetWaveNumbers(waveManager.CurrentWaveNumber, total);
         }
         else if (waveManager.HasNextWave)
         {
@@ -216,6 +238,8 @@ public sealed class UIManager : MonoBehaviour
 
             if (waveText != null)
                 waveText.text = "Wave: " + waveManager.NextWaveNumber + " / " + total;
+
+            SetWaveNumbers(waveManager.NextWaveNumber, total);
         }
         else if (waveManager.AllWavesSpawned)
         {
@@ -228,7 +252,17 @@ public sealed class UIManager : MonoBehaviour
                     ? "Clearing final wave..."
                     : "Victory!";
             }
+
+            SetWaveNumbers(total, total);
         }
+    }
+
+    private void SetWaveNumbers(int current, int total)
+    {
+        if (waveCurrentNumber != null)
+            waveCurrentNumber.SetNumber(current);
+        if (waveTotalNumber != null)
+            waveTotalNumber.SetNumber(total);
     }
 
     private void RequestEarlyNextWave()
