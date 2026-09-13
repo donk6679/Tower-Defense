@@ -34,6 +34,16 @@ public sealed class Enemy : MonoBehaviour
     private float slowRemaining;
     private float moveSpeedMultiplier = 1f;
 
+    [Header("Walk Animation")]
+    [SerializeField] private Sprite[] walkFrames = new Sprite[0];
+    [SerializeField, Min(0.02f)] private float walkFrameInterval = 0.22f;
+    [Tooltip("素材默认是否朝左；狐狸怪朝左填 true，正面素材填 false。")]
+    [SerializeField] private bool defaultFacingLeft;
+    [SerializeField, Min(0f)] private float facingDeadZone = 0.05f;
+
+    private int walkFrameIndex;
+    private float walkTimer;
+
     public int MaxHealth => maxHealth;
     public int CurrentHealth => currentHealth;
     public bool IsDead => isDead;
@@ -55,6 +65,8 @@ public sealed class Enemy : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer != null)
             originalSpriteColor = spriteRenderer.color;
+
+        ApplyWalkFrame(0);
     }
 
     private void OnEnable()
@@ -94,6 +106,21 @@ public sealed class Enemy : MonoBehaviour
         goldReward = Mathf.Max(0, value);
     }
 
+    /// <summary>编辑器配置行走帧与朝向规则。</summary>
+    public void SetWalkFrames(Sprite[] frames, float frameInterval, bool facesLeftByDefault)
+    {
+        walkFrames = frames == null ? new Sprite[0] : frames;
+        walkFrameInterval = Mathf.Max(0.02f, frameInterval);
+        defaultFacingLeft = facesLeftByDefault;
+        walkFrameIndex = 0;
+        walkTimer = 0f;
+
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        ApplyWalkFrame(0);
+    }
+
     /// <summary>
     /// 施加减速。multiplier 是速度倍率（0.6 = 减速 40%），duration 为持续秒数。
     /// 重复施加时保留更慢的倍率与更长的剩余时间。
@@ -127,6 +154,7 @@ public sealed class Enemy : MonoBehaviour
 
         isDead = true;
 
+        AudioManager.PlaySfx("enemy_death", 0.8f);
         Died?.Invoke(this);
         SpawnDeathBurst();
         Destroy(gameObject);
@@ -162,6 +190,8 @@ public sealed class Enemy : MonoBehaviour
         Vector3 direction = target.position - transform.position;
         float step = moveSpeed * moveSpeedMultiplier * Time.deltaTime;
 
+        UpdateWalkAnimation(direction);
+
         // 一步之内到达：直接吸附到路径点，避免转弯抖动
         if (direction.magnitude <= step)
         {
@@ -171,6 +201,43 @@ public sealed class Enemy : MonoBehaviour
         }
 
         transform.position += direction.normalized * step;
+    }
+
+    /// <summary>
+    /// 移动时交替播放两帧形成行走效果；
+    /// 水平移动时根据方向翻转朝向，垂直移动（|x| 很小）保持当前朝向。
+    /// </summary>
+    private void UpdateWalkAnimation(Vector3 direction)
+    {
+        if (spriteRenderer == null)
+            return;
+
+        if (walkFrames != null && walkFrames.Length >= 2)
+        {
+            walkTimer += Time.deltaTime;
+            if (walkTimer >= walkFrameInterval)
+            {
+                walkTimer -= walkFrameInterval;
+                walkFrameIndex = (walkFrameIndex + 1) % walkFrames.Length;
+                ApplyWalkFrame(walkFrameIndex);
+            }
+        }
+
+        if (Mathf.Abs(direction.x) > facingDeadZone)
+        {
+            bool movingRight = direction.x > 0f;
+            spriteRenderer.flipX = defaultFacingLeft ? movingRight : !movingRight;
+        }
+    }
+
+    private void ApplyWalkFrame(int index)
+    {
+        if (spriteRenderer == null || walkFrames == null || walkFrames.Length == 0)
+            return;
+
+        int safeIndex = Mathf.Clamp(index, 0, walkFrames.Length - 1);
+        if (walkFrames[safeIndex] != null)
+            spriteRenderer.sprite = walkFrames[safeIndex];
     }
 
     private void ReachBase()

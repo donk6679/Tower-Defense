@@ -12,6 +12,8 @@ public sealed class MainMenuUI : MonoBehaviour
 
     private void Awake()
     {
+        AudioManager.PlayBgm("bgm_menu");
+
         // 运行时绑定按钮：Unity 编辑器里用 AddListener 添加的
         // 普通监听不会随场景保存，因此在 Awake 统一查找并绑定。
         Button[] buttons = GetComponentsInChildren<Button>(true);
@@ -22,9 +24,11 @@ public sealed class MainMenuUI : MonoBehaviour
             {
                 case "StartButton":
                     buttons[i].onClick.AddListener(StartGame);
+                    buttons[i].onClick.AddListener(() => AudioManager.PlaySfx("click", 0.7f));
                     break;
                 case "ExitButton":
                     buttons[i].onClick.AddListener(QuitGame);
+                    buttons[i].onClick.AddListener(() => AudioManager.PlaySfx("click", 0.7f));
                     break;
             }
         }

@@ -32,12 +32,14 @@ public sealed class WaveManager : MonoBehaviour
     private bool skipIntermissionRequested;
     private int nextWaveNumber = 1;
     private float intermissionRemaining;
+    private float intermissionTotal;
 
     public int EnemiesAlive => enemiesAlive;
     public int CurrentWaveNumber => currentWaveNumber;
     public int TotalWaveCount => waves == null ? 0 : waves.Length;
     public int NextWaveNumber => nextWaveNumber;
     public float IntermissionRemaining => Mathf.Max(0f, intermissionRemaining);
+    public float IntermissionTotal => Mathf.Max(0.01f, intermissionTotal);
 
     public bool IsSpawningWave => spawningWave;
     public bool IsWaitingForNextWave => waitingForNextWave;
@@ -97,6 +99,7 @@ public sealed class WaveManager : MonoBehaviour
         }
 
         skipIntermissionRequested = true;
+        AudioManager.PlaySfx("early_wave");
         return true;
     }
 
@@ -160,6 +163,7 @@ public sealed class WaveManager : MonoBehaviour
         int total = TotalWaveCount;
 
         Debug.Log("[Wave] 第 " + waveNumber + "/" + total + " 波开始生成");
+        AudioManager.PlaySfx("wave_start");
 
         if (IsGameOver())
         {
@@ -197,6 +201,7 @@ public sealed class WaveManager : MonoBehaviour
     {
         waitingForNextWave = true;
         intermissionRemaining = Mathf.Max(0.5f, nextWaveAutoDelay);
+        intermissionTotal = intermissionRemaining;
 
         Debug.Log("[Wave] 第 " + completedWaveNumber + " 波已生成完毕，" +
                   intermissionRemaining.ToString("0.0") +
@@ -240,6 +245,8 @@ public sealed class WaveManager : MonoBehaviour
 
         if (GameManager.Instance != null)
             GameManager.Instance.LoseLife();
+
+        AudioManager.PlaySfx("life_lost", 0.8f);
     }
 
     private void HandleEnemyDied(Enemy enemy)

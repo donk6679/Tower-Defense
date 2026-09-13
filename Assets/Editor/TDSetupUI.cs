@@ -17,6 +17,9 @@ namespace TowerDefense.EditorTools
     public static class TDSetupUI
     {
         private const string WhiteSpritePath = "Assets/Sprites/UI/white.png";
+        private const string VictoryResultPath = "Assets/Sprites/UI/victory_result.png";
+        private const string DefeatResultPath = "Assets/Sprites/UI/defeat_result.png";
+        private const string NextWaveButtonPath = "Assets/Sprites/UI/next_wave_button.png";
         private const string BasicEnemyPath = "Assets/Prefabs/Enemy.prefab";
         private const string FastEnemyPath = "Assets/Prefabs/FastEnemy.prefab";
         private const string TankEnemyPath = "Assets/Prefabs/TankEnemy.prefab";
@@ -168,6 +171,8 @@ namespace TowerDefense.EditorTools
             BuildHUD(uiRoot.transform, ui);
             BuildStartButton(uiRoot.transform, ui, whiteSprite);
             BuildUpgradePanel(uiRoot.transform, ui, whiteSprite);
+            EnsureUiSpriteImport(VictoryResultPath);
+            EnsureUiSpriteImport(DefeatResultPath);
             BuildResultPanels(uiRoot.transform, ui, whiteSprite);
 
             // 新交互：点击地块后由上下文菜单接管建塔/升级/拆除
@@ -211,7 +216,10 @@ namespace TowerDefense.EditorTools
 
             // Wave: [icon] [current] / [total]
             RectTransform waveRow = CreateHudRow(hudRoot, "WaveRow", 78f);
+            waveRow.GetComponent<HorizontalLayoutGroup>().spacing = -50f;
             ui.waveIcon = CreateHudIcon(waveRow, "WaveIcon", waveSprite, 104f);
+            // 只加宽“波次图标 → 第一个数字”的距离，不影响 1 / 3 的其他间距
+            CreateHudSpacer(waveRow, "WaveIconGap", 72f);
             ui.waveCurrentNumber = CreateHudNumber(waveRow, "WaveCurrentNumber", 184f);
             ui.waveSlash = CreateHudIcon(waveRow, "WaveSlash", slashSprite, 120f);
             ui.waveTotalNumber = CreateHudNumber(waveRow, "WaveTotalNumber", 184f);
@@ -262,9 +270,17 @@ namespace TowerDefense.EditorTools
 
             HudSpriteNumber number = rect.gameObject.AddComponent<HudSpriteNumber>();
             number.digitHeight = height;
-            number.spacing = -6f;
+            number.spacing = -50f;
             number.digitWidthRatio = 0.55f;
             return number;
+        }
+
+        private static void CreateHudSpacer(Transform parent, string name, float width)
+        {
+            RectTransform rect = CreateRect(parent, name);
+            LayoutElement element = rect.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            element.minWidth = width;
         }
 
         private static Sprite LoadHudSprite(string spriteName)
@@ -314,13 +330,73 @@ namespace TowerDefense.EditorTools
 
         private static void BuildStartButton(Transform canvasRoot, UIManager ui, Sprite whiteSprite)
         {
-            ui.startButton = CreateButton(
-                canvasRoot, "StartWaveButton", "Start Wave 1",
-                whiteSprite, 34, new Color(0.1f, 0.5f, 0.25f, 1f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 24f), new Vector2(340f, 90f));
+            EnsureUiSpriteImport(NextWaveButtonPath);
+            Sprite buttonSprite = AssetDatabase.LoadAssetAtPath<Sprite>(NextWaveButtonPath);
 
-            ui.startButtonText = ui.startButton.GetComponentInChildren<Text>();
+            const float buttonWidth = 210f;
+            const float buttonHeight = 82.5f; // 裁剪后图片比例约 2.55:1
+            const float barHeight = 6f;
+            const float barGap = 4f;
+
+            RectTransform root = CreateRect(canvasRoot, "WaveButtonRoot");
+            root.anchorMin = new Vector2(0.5f, 0f);
+            root.anchorMax = new Vector2(0.5f, 0f);
+            root.pivot = new Vector2(0.5f, 0f);
+            root.anchoredPosition = new Vector2(0f, 24f);
+            root.sizeDelta = new Vector2(buttonWidth, buttonHeight + barGap + barHeight);
+
+            CanvasGroup group = root.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            // 下一波按钮（图片自带文字，不显示额外金币奖励）
+            RectTransform buttonRect = CreateRect(root, "StartWaveButton");
+            buttonRect.anchorMin = new Vector2(0.5f, 1f);
+            buttonRect.anchorMax = new Vector2(0.5f, 1f);
+            buttonRect.pivot = new Vector2(0.5f, 1f);
+            buttonRect.anchoredPosition = Vector2.zero;
+            buttonRect.sizeDelta = new Vector2(buttonWidth, buttonHeight);
+
+            Image buttonImage = buttonRect.gameObject.AddComponent<Image>();
+            buttonImage.sprite = buttonSprite;
+            buttonImage.preserveAspect = true;
+            buttonImage.raycastTarget = true;
+
+            Button button = buttonRect.gameObject.AddComponent<Button>();
+            button.targetGraphic = buttonImage;
+
+            // 进度条背景
+            RectTransform barBackground = CreateRect(root, "WaveProgressBg");
+            barBackground.anchorMin = new Vector2(0.5f, 0f);
+            barBackground.anchorMax = new Vector2(0.5f, 0f);
+            barBackground.pivot = new Vector2(0.5f, 0f);
+            barBackground.anchoredPosition = new Vector2(0f, 0f);
+            barBackground.sizeDelta = new Vector2(buttonWidth, barHeight);
+
+            Image barBackgroundImage = barBackground.gameObject.AddComponent<Image>();
+            barBackgroundImage.sprite = whiteSprite;
+            barBackgroundImage.color = new Color(0f, 0f, 0f, 0.35f);
+            barBackgroundImage.raycastTarget = false;
+
+            // 进度条填充：左对齐，宽度随时间从 100% 缩到 0
+            RectTransform fill = CreateRect(barBackground, "WaveProgressFill");
+            fill.anchorMin = new Vector2(0f, 0f);
+            fill.anchorMax = new Vector2(0f, 1f);
+            fill.pivot = new Vector2(0f, 0.5f);
+            fill.anchoredPosition = Vector2.zero;
+            fill.sizeDelta = new Vector2(buttonWidth, 0f);
+
+            Image fillImage = fill.gameObject.AddComponent<Image>();
+            fillImage.sprite = whiteSprite;
+            fillImage.color = new Color(1f, 0.85f, 0.2f, 1f);
+            fillImage.raycastTarget = false;
+
+            ui.startButton = button;
+            ui.startButtonText = null;
+            ui.startButtonGroup = group;
+            ui.waveProgressFill = fill;
+            ui.waveProgressFullWidth = buttonWidth;
         }
 
         private static void BuildUpgradePanel(Transform canvasRoot, UIManager ui, Sprite whiteSprite)
@@ -358,59 +434,82 @@ namespace TowerDefense.EditorTools
 
         private static void BuildResultPanels(Transform canvasRoot, UIManager ui, Sprite whiteSprite)
         {
-            // 胜利面板
-            ui.winPanel = CreateDimPanel(canvasRoot, "WinPanel", PanelDim).gameObject;
+            Sprite victorySprite = AssetDatabase.LoadAssetAtPath<Sprite>(VictoryResultPath);
+            Sprite defeatSprite = AssetDatabase.LoadAssetAtPath<Sprite>(DefeatResultPath);
 
-            CreateScreenText(
-                ui.winPanel.transform, "WinTitle", "VICTORY!",
-                86, new Color(1f, 0.9f, 0.3f),
-                new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 120f));
-
-            CreateScreenText(
-                ui.winPanel.transform, "WinSubtitle", "All 8 waves defended!",
-                40, Color.white,
-                new Vector2(0.5f, 0.44f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 60f));
-
-            ui.winRestartButton = CreateButton(
-                ui.winPanel.transform, "WinRestart", "Restart",
-                whiteSprite, 38, new Color(0.15f, 0.35f, 0.7f, 1f),
-                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 80f), new Vector2(280f, 80f));
-
-            ui.winMenuButton = CreateButton(
-                ui.winPanel.transform, "WinMenu", "Main Menu",
-                whiteSprite, 34, new Color(0.2f, 0.3f, 0.45f, 1f),
-                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -80f), new Vector2(280f, 80f));
-
+            // 胜利结算：重玩 / 主菜单
+            ui.winPanel = CreateResultPanel(canvasRoot, "WinPanel", victorySprite);
+            ui.winRestartButton = CreateInvisibleResultButton(
+                ui.winPanel.transform, "WinRestart", whiteSprite,
+                new Vector2(0.3459f, 0.15f), new Vector2(820f, 300f));
+            ui.winMenuButton = CreateInvisibleResultButton(
+                ui.winPanel.transform, "WinMenu", whiteSprite,
+                new Vector2(0.6531f, 0.15f), new Vector2(780f, 280f));
             ui.winPanel.SetActive(false);
 
-            // 失败面板
-            ui.losePanel = CreateDimPanel(canvasRoot, "LosePanel", PanelDim).gameObject;
-
-            CreateScreenText(
-                ui.losePanel.transform, "LoseTitle", "GAME OVER",
-                86, new Color(1f, 0.35f, 0.3f),
-                new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 120f));
-
-            CreateScreenText(
-                ui.losePanel.transform, "LoseSubtitle", "The core was destroyed...",
-                40, Color.white,
-                new Vector2(0.5f, 0.44f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 60f));
-
-            ui.loseRestartButton = CreateButton(
-                ui.losePanel.transform, "LoseRestart", "Restart",
-                whiteSprite, 38, new Color(0.15f, 0.35f, 0.7f, 1f),
-                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 80f), new Vector2(280f, 80f));
-
-            ui.loseMenuButton = CreateButton(
-                ui.losePanel.transform, "LoseMenu", "Main Menu",
-                whiteSprite, 34, new Color(0.2f, 0.3f, 0.45f, 1f),
-                new Vector2(0.5f, 0.28f), new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -80f), new Vector2(280f, 80f));
-
+            // 失败结算：重试 / 主菜单
+            ui.losePanel = CreateResultPanel(canvasRoot, "LosePanel", defeatSprite);
+            ui.loseRestartButton = CreateInvisibleResultButton(
+                ui.losePanel.transform, "LoseRestart", whiteSprite,
+                new Vector2(0.3898f, 0.1544f), new Vector2(620f, 260f));
+            ui.loseMenuButton = CreateInvisibleResultButton(
+                ui.losePanel.transform, "LoseMenu", whiteSprite,
+                new Vector2(0.6113f, 0.1544f), new Vector2(640f, 280f));
             ui.losePanel.SetActive(false);
+        }
+
+        private static GameObject CreateResultPanel(Transform parent, string name, Sprite sprite)
+        {
+            RectTransform rect = CreateRect(parent, name);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = false;
+            image.raycastTarget = true;
+            return rect.gameObject;
+        }
+
+        private static Button CreateInvisibleResultButton(
+            Transform parent,
+            string name,
+            Sprite sprite,
+            Vector2 anchor,
+            Vector2 size)
+        {
+            RectTransform rect = CreateRect(parent, name);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = size;
+
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = new Color(1f, 1f, 1f, 0f);
+            image.raycastTarget = true;
+
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            return button;
+        }
+
+        private static void EnsureUiSpriteImport(string path)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+                return;
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 100f;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
         }
 
         private static RectTransform CreateDimPanel(Transform parent, string name, Color color)

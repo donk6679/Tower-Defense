@@ -78,7 +78,10 @@ public class Projectile : MonoBehaviour
     protected virtual void OnHitTarget(Enemy enemy)
     {
         if (enemy != null)
+        {
+            AudioManager.PlaySfx("hit", 0.5f);
             enemy.TakeDamage(damage);
+        }
     }
 
     private void SpawnTrail()

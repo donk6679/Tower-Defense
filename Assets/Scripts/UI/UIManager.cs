@@ -35,6 +35,12 @@ public sealed class UIManager : MonoBehaviour
     [Header("Wave")]
     public Button startButton;
     public Text startButtonText;
+    public CanvasGroup startButtonGroup;
+    public RectTransform waveProgressFill;
+    public float waveProgressFullWidth = 420f;
+    [SerializeField, Min(0.05f)] private float waveButtonFadeDuration = 0.2f;
+
+    private float waveButtonTargetAlpha;
 
     [Header("Upgrade Panel")]
     public GameObject upgradePanel;
@@ -60,6 +66,8 @@ public sealed class UIManager : MonoBehaviour
 
     private void Start()
     {
+        AudioManager.PlayBgm("bgm_battle");
+
         gameManager = FindObjectOfType<GameManager>();
         waveManager = FindObjectOfType<WaveManager>();
         buildManager = FindObjectOfType<BuildManager>();
@@ -82,6 +90,7 @@ public sealed class UIManager : MonoBehaviour
             return;
 
         RefreshWaveHud();
+        UpdateWaveButtonFade();
     }
 
     private void OnDestroy()
@@ -115,6 +124,7 @@ public sealed class UIManager : MonoBehaviour
     private void SetupButtonListeners()
     {
         startButton.onClick.AddListener(RequestEarlyNextWave);
+        AddClickSound(startButton);
 
         if (towerButtons != null)
         {
@@ -122,21 +132,46 @@ public sealed class UIManager : MonoBehaviour
             {
                 int index = i;
                 towerButtons[i].onClick.AddListener(() => buildManager.SelectTower(index));
+                AddClickSound(towerButtons[i]);
             }
         }
 
         if (winRestartButton != null)
+        {
             winRestartButton.onClick.AddListener(RestartGame);
+            AddClickSound(winRestartButton);
+        }
         if (loseRestartButton != null)
+        {
             loseRestartButton.onClick.AddListener(RestartGame);
+            AddClickSound(loseRestartButton);
+        }
         if (winMenuButton != null)
+        {
             winMenuButton.onClick.AddListener(LoadMainMenu);
+            AddClickSound(winMenuButton);
+        }
         if (loseMenuButton != null)
+        {
             loseMenuButton.onClick.AddListener(LoadMainMenu);
+            AddClickSound(loseMenuButton);
+        }
         if (demolishButton != null)
+        {
             demolishButton.onClick.AddListener(buildManager.ToggleDemolishMode);
+            AddClickSound(demolishButton);
+        }
         if (upgradeButton != null)
+        {
             upgradeButton.onClick.AddListener(RequestTowerUpgrade);
+            AddClickSound(upgradeButton);
+        }
+    }
+
+    private static void AddClickSound(Button button)
+    {
+        if (button != null)
+            button.onClick.AddListener(() => AudioManager.PlaySfx("click", 0.7f));
     }
 
     private void CacheTowerLabels()
@@ -199,29 +234,24 @@ public sealed class UIManager : MonoBehaviour
         if (waveManager.IsWaitingForNextWave)
         {
             int nextWave = waveManager.NextWaveNumber;
-            int bonus = waveManager.EstimatedEarlyBonus;
             float remaining = waveManager.IntermissionRemaining;
+            float duration = waveManager.IntermissionTotal;
 
-            if (startButton != null)
-                startButton.interactable = true;
-
-            if (startButtonText != null)
-                startButtonText.text = "Start Wave " + nextWave + " Now  +" + bonus +
-                                       "g  | auto " + remaining.ToString("0.0") + "s";
+            ShowWaveButton(true);
+            SetWaveProgress(remaining / duration);
 
             if (waveText != null)
                 waveText.text = "Wave: " + nextWave + " / " + total + "  (ready)";
 
             SetWaveNumbers(nextWave, total);
+            return;
         }
-        else if (waveManager.IsSpawningWave)
+
+        ShowWaveButton(false);
+        SetWaveProgress(0f);
+
+        if (waveManager.IsSpawningWave)
         {
-            if (startButton != null)
-                startButton.interactable = false;
-
-            if (startButtonText != null)
-                startButtonText.text = "Wave " + waveManager.CurrentWaveNumber + " spawning...";
-
             if (waveText != null)
                 waveText.text = "Wave: " + waveManager.CurrentWaveNumber + " / " + total;
 
@@ -230,12 +260,6 @@ public sealed class UIManager : MonoBehaviour
         else if (waveManager.HasNextWave)
         {
             // 游戏刚开始或波次之间的极短过渡
-            if (startButton != null)
-                startButton.interactable = false;
-
-            if (startButtonText != null)
-                startButtonText.text = "Wave " + waveManager.NextWaveNumber + " starting soon...";
-
             if (waveText != null)
                 waveText.text = "Wave: " + waveManager.NextWaveNumber + " / " + total;
 
@@ -243,18 +267,56 @@ public sealed class UIManager : MonoBehaviour
         }
         else if (waveManager.AllWavesSpawned)
         {
-            if (startButton != null)
-                startButton.interactable = false;
-
-            if (startButtonText != null)
-            {
-                startButtonText.text = waveManager.EnemiesAlive > 0
-                    ? "Clearing final wave..."
-                    : "Victory!";
-            }
-
             SetWaveNumbers(total, total);
         }
+    }
+
+    private void ShowWaveButton(bool visible)
+    {
+        waveButtonTargetAlpha = visible ? 1f : 0f;
+
+        if (!visible)
+        {
+            // 淡出时立即停止接收点击，避免还能点到
+            if (startButtonGroup != null)
+            {
+                startButtonGroup.blocksRaycasts = false;
+                startButtonGroup.interactable = false;
+            }
+
+            if (startButton != null)
+                startButton.interactable = false;
+        }
+    }
+
+    private void UpdateWaveButtonFade()
+    {
+        if (startButtonGroup == null)
+            return;
+
+        float step = Time.unscaledDeltaTime / Mathf.Max(0.05f, waveButtonFadeDuration);
+        startButtonGroup.alpha = Mathf.MoveTowards(
+            startButtonGroup.alpha,
+            waveButtonTargetAlpha,
+            step);
+
+        bool clickable = waveButtonTargetAlpha > 0.5f;
+        startButtonGroup.blocksRaycasts = clickable;
+        startButtonGroup.interactable = clickable;
+
+        if (startButton != null)
+            startButton.interactable = clickable;
+    }
+
+    private void SetWaveProgress(float ratio)
+    {
+        if (waveProgressFill == null)
+            return;
+
+        ratio = Mathf.Clamp01(ratio);
+        Vector2 size = waveProgressFill.sizeDelta;
+        size.x = waveProgressFullWidth * ratio;
+        waveProgressFill.sizeDelta = size;
     }
 
     private void SetWaveNumbers(int current, int total)

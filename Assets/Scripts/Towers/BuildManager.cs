@@ -369,6 +369,7 @@ public sealed class BuildManager : MonoBehaviour
         ClearUpgradeTowerSelection();
         HideBuildRangePreview();
         slot.PlaceTower(tower, config.Cost);
+        AudioManager.PlaySfx("build");
         Debug.Log("[Build] 建造了 " + config.DisplayName + "，剩余金币 " + GameManager.Instance.Gold, tower);
         return true;
     }
@@ -404,7 +405,7 @@ public sealed class BuildManager : MonoBehaviour
 
         TowerBase tower = slot.PlacedTower;
         int investedGold = tower != null ? tower.TotalInvestedGold : slot.TowerCost;
-        int refund = Mathf.RoundToInt(investedGold * demolishRefundRate);
+        int refund = GetDemolishRefund(slot);
         TowerBase removedTower = slot.RemoveTower();
 
         if (removedTower != null)
@@ -416,9 +417,21 @@ public sealed class BuildManager : MonoBehaviour
         if (refund > 0)
             GameManager.Instance.AddGold(refund);
 
+        AudioManager.PlaySfx("demolish");
         Debug.Log("[Build] 已拆除炮塔（累计投入 " + investedGold +
                   "），返还 " + refund + " 金币，当前 " + GameManager.Instance.Gold);
         return true;
+    }
+
+    /// <summary>预览拆除返还金额（不实际拆除）。</summary>
+    public int GetDemolishRefund(BuildSlot slot)
+    {
+        if (slot == null)
+            return 0;
+
+        TowerBase tower = slot.PlacedTower;
+        int investedGold = tower != null ? tower.TotalInvestedGold : slot.TowerCost;
+        return Mathf.RoundToInt(investedGold * demolishRefundRate);
     }
 
     private Transform FindOrCreateTowerParent()

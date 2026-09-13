@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &8121877864878230538
+--- !u!1 &8624887420949391208
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,9 +8,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2804079758846316199}
-  - component: {fileID: 6823367529594790877}
-  - component: {fileID: 4309807061084595096}
+  - component: {fileID: 4750496205278839483}
+  - component: {fileID: 6863404004758707772}
+  - component: {fileID: 4422015344897758156}
   m_Layer: 0
   m_Name: GunTower
   m_TagString: Untagged
@@ -18,13 +18,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2804079758846316199
+--- !u!4 &4750496205278839483
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8121877864878230538}
+  m_GameObject: {fileID: 8624887420949391208}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -33,13 +33,13 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &6823367529594790877
+--- !u!212 &6863404004758707772
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8121877864878230538}
+  m_GameObject: {fileID: 8624887420949391208}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -85,13 +85,13 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &4309807061084595096
+--- !u!114 &4422015344897758156
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8121877864878230538}
+  m_GameObject: {fileID: 8624887420949391208}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 918f4ec0927cf294fa4828e025921713, type: 3}
@@ -119,5 +119,5 @@ MonoBehaviour:
   range: 3.2
   damage: 5
   fireRate: 2
-  projectilePrefab: {fileID: 7775094399486058847, guid: 660773cd22f6fa74c81628864c900540, type: 3}
+  projectilePrefab: {fileID: 5810370687761153042, guid: 660773cd22f6fa74c81628864c900540, type: 3}
   firePoint: {fileID: 0}

@@ -136,6 +136,7 @@ public class TowerBase : MonoBehaviour
         totalInvestedGold += next.upgradeCost;
         currentLevel++;
         ApplyLevelSprite();
+        AudioManager.PlaySfx("upgrade");
         Debug.Log("[Tower] " + displayName + " 升级到 Lv" + currentLevel +
                   "，剩余金币 " + GameManager.Instance.Gold, this);
         return true;
@@ -281,7 +282,11 @@ public class TowerBase : MonoBehaviour
         Projectile projectile = Instantiate(projectilePrefab, startPosition, Quaternion.identity);
         ConfigureProjectile(projectile);
         projectile.Launch(target, Damage);
+        AudioManager.PlaySfx(ShootSfxName, 0.7f);
     }
+
+    /// <summary>开火音效名，子类可覆盖为不同音色。</summary>
+    protected virtual string ShootSfxName => "shoot_gun";
 
     /// <summary>子类可在开火前调整子弹（例如冰霜塔写入当前等级的减速参数）。</summary>
     protected virtual void ConfigureProjectile(Projectile projectile)

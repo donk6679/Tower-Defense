@@ -12,6 +12,9 @@ public sealed class TowerContextMenu : MonoBehaviour
 {
     private const int ButtonSize = 112;
     private const float MenuOffsetAboveTile = 125f;
+    private const float CostIconSize = 84f;
+    private const float CostDigitHeight = 67.5f;
+    private const float OptionSpacing = 4f;
 
     public static TowerContextMenu Instance { get; private set; }
 
@@ -29,6 +32,7 @@ public sealed class TowerContextMenu : MonoBehaviour
     private static Sprite upgradeActionIcon;
     private static Sprite maxLevelActionIcon;
     private static Sprite demolishActionIcon;
+    private static Sprite costGoldIcon;
 
     private static Sprite WhiteSprite
     {
@@ -144,9 +148,13 @@ public sealed class TowerContextMenu : MonoBehaviour
                 continue;
 
             Sprite buildIcon = GetBuildIcon(config.TowerPrefab);
-            Button button = buildIcon != null
-                ? CreateIconButton(buildIcon, Color.white, true)
-                : CreateIconButton(VFXFactory.GlowSprite, GetTowerColor(config.TowerPrefab));
+            Sprite iconSprite = buildIcon != null ? buildIcon : VFXFactory.GlowSprite;
+            Color iconColor = buildIcon != null ? Color.white : GetTowerColor(config.TowerPrefab);
+            Button button = CreateActionOption(
+                iconSprite,
+                iconColor,
+                buildIcon != null,
+                config.Cost);
 
             int index = i;
             button.onClick.AddListener(() =>
@@ -173,11 +181,15 @@ public sealed class TowerContextMenu : MonoBehaviour
             ? LoadActionIcon(ref maxLevelActionIcon, "max_level")
             : LoadActionIcon(ref upgradeActionIcon, "upgrade");
 
-        Button upgradeButton = upgradeSprite != null
-            ? CreateIconButton(upgradeSprite, Color.white, true)
-            : CreateIconButton(
-                ArrowSprite,
-                isMaxLevel ? new Color(0.6f, 0.6f, 0.6f, 1f) : new Color(0.95f, 0.85f, 0.3f, 1f));
+        Button upgradeButton = CreateActionOption(
+            upgradeSprite != null ? upgradeSprite : ArrowSprite,
+            upgradeSprite != null
+                ? Color.white
+                : isMaxLevel
+                    ? new Color(0.6f, 0.6f, 0.6f, 1f)
+                    : new Color(0.95f, 0.85f, 0.3f, 1f),
+            upgradeSprite != null,
+            isMaxLevel ? -1 : tower.NextUpgradeCost);
 
         if (isMaxLevel)
         {
@@ -194,9 +206,11 @@ public sealed class TowerContextMenu : MonoBehaviour
 
         // 拆除：红色叉号
         Sprite demolishSprite = LoadActionIcon(ref demolishActionIcon, "demolish");
-        Button demolishButton = demolishSprite != null
-            ? CreateIconButton(demolishSprite, Color.white, true)
-            : CreateIconButton(CrossSprite, new Color(1f, 0.4f, 0.35f, 1f));
+        Button demolishButton = CreateActionOption(
+            demolishSprite != null ? demolishSprite : CrossSprite,
+            demolishSprite != null ? Color.white : new Color(1f, 0.4f, 0.35f, 1f),
+            demolishSprite != null,
+            buildManager.GetDemolishRefund(slot));
 
         demolishButton.onClick.AddListener(() =>
         {
@@ -238,27 +252,116 @@ public sealed class TowerContextMenu : MonoBehaviour
         return null;
     }
 
-    private Button CreateIconButton(Sprite iconSprite, Color iconColor, bool preserveAspect = false)
+    private Button CreateActionOption(
+        Sprite iconSprite,
+        Color iconColor,
+        bool preserveAspect,
+        int cost)
     {
-        GameObject buttonObject = new GameObject("ContextIcon", typeof(RectTransform));
-        buttonObject.transform.SetParent(menuRect, false);
+        bool showCost = cost >= 0;
+        float costRowHeight = Mathf.Max(CostIconSize, CostDigitHeight);
+        float optionHeight = ButtonSize + (showCost ? OptionSpacing + costRowHeight : 0f);
 
-        RectTransform rect = (RectTransform)buttonObject.transform;
-        rect.sizeDelta = new Vector2(ButtonSize, ButtonSize);
+        GameObject optionObject = new GameObject("ContextOption", typeof(RectTransform));
+        optionObject.transform.SetParent(menuRect, false);
 
-        Image icon = buttonObject.AddComponent<Image>();
+        RectTransform optionRect = (RectTransform)optionObject.transform;
+        optionRect.sizeDelta = new Vector2(ButtonSize, optionHeight);
+
+        LayoutElement optionLayout = optionObject.AddComponent<LayoutElement>();
+        optionLayout.preferredWidth = ButtonSize;
+        optionLayout.preferredHeight = optionHeight;
+        optionLayout.minHeight = optionHeight;
+
+        VerticalLayoutGroup vertical = optionObject.AddComponent<VerticalLayoutGroup>();
+        vertical.spacing = OptionSpacing;
+        vertical.childAlignment = TextAnchor.MiddleCenter;
+        vertical.childControlWidth = true;
+        vertical.childControlHeight = true;
+        vertical.childForceExpandWidth = false;
+        vertical.childForceExpandHeight = false;
+
+        // 透明背景负责接收点击，图标和金额只是显示
+        Image hitArea = optionObject.AddComponent<Image>();
+        hitArea.color = new Color(1f, 1f, 1f, 0f);
+        hitArea.raycastTarget = true;
+
+        Button button = optionObject.AddComponent<Button>();
+        button.targetGraphic = hitArea;
+
+        GameObject iconObject = new GameObject("Icon", typeof(RectTransform));
+        iconObject.transform.SetParent(optionObject.transform, false);
+
+        Image icon = iconObject.AddComponent<Image>();
         icon.sprite = iconSprite;
         icon.color = iconColor;
         icon.type = Image.Type.Simple;
         icon.preserveAspect = preserveAspect;
+        icon.raycastTarget = false;
 
-        LayoutElement layoutElement = buttonObject.AddComponent<LayoutElement>();
-        layoutElement.preferredWidth = ButtonSize;
-        layoutElement.preferredHeight = ButtonSize;
+        LayoutElement iconLayout = iconObject.AddComponent<LayoutElement>();
+        iconLayout.preferredWidth = ButtonSize;
+        iconLayout.preferredHeight = ButtonSize;
+        iconLayout.minHeight = ButtonSize;
 
-        Button button = buttonObject.AddComponent<Button>();
-        button.targetGraphic = icon;
+        if (showCost)
+            CreateCostRow(optionObject.transform, cost);
+
         return button;
+    }
+
+    private void CreateCostRow(Transform parent, int cost)
+    {
+        GameObject rowObject = new GameObject("Cost", typeof(RectTransform));
+        rowObject.transform.SetParent(parent, false);
+
+        LayoutElement rowLayout = rowObject.AddComponent<LayoutElement>();
+        float costRowHeight = Mathf.Max(CostIconSize, CostDigitHeight);
+        rowLayout.preferredHeight = costRowHeight;
+        rowLayout.minHeight = costRowHeight;
+
+        HorizontalLayoutGroup row = rowObject.AddComponent<HorizontalLayoutGroup>();
+        row.spacing = -4f;
+        row.childAlignment = TextAnchor.MiddleCenter;
+        row.childControlWidth = true;
+        row.childControlHeight = true;
+        row.childForceExpandWidth = false;
+        row.childForceExpandHeight = false;
+
+        GameObject goldObject = new GameObject("GoldIcon", typeof(RectTransform));
+        goldObject.transform.SetParent(rowObject.transform, false);
+
+        Image gold = goldObject.AddComponent<Image>();
+        gold.sprite = GetCostGoldIcon();
+        gold.preserveAspect = true;
+        gold.raycastTarget = false;
+
+        LayoutElement goldLayout = goldObject.AddComponent<LayoutElement>();
+        goldLayout.preferredWidth = CostIconSize;
+        goldLayout.preferredHeight = CostIconSize;
+        goldLayout.minHeight = CostIconSize;
+
+        GameObject numberObject = new GameObject("CostNumber", typeof(RectTransform));
+        numberObject.transform.SetParent(rowObject.transform, false);
+
+        LayoutElement numberLayout = numberObject.AddComponent<LayoutElement>();
+        numberLayout.preferredHeight = CostDigitHeight;
+        numberLayout.minHeight = CostDigitHeight;
+
+        HudSpriteNumber number = numberObject.AddComponent<HudSpriteNumber>();
+        number.digitHeight = CostDigitHeight;
+        // 方块贴图有透明边距：宽度放开到 1 倍高度，数字才会按高度完整显示；
+        // 再用负间距抵消贴图自身的左右留白。
+        number.spacing = -18f;
+        number.digitWidthRatio = 1f;
+        number.SetNumber(cost);
+    }
+
+    private static Sprite GetCostGoldIcon()
+    {
+        if (costGoldIcon == null)
+            costGoldIcon = Resources.Load<Sprite>("HudIcons/gold");
+        return costGoldIcon;
     }
 
     private void CreatePanel()

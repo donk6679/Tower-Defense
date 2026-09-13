@@ -5,4 +5,5 @@ using UnityEngine;
 /// </summary>
 public sealed class SniperTower : TowerBase
 {
+    protected override string ShootSfxName => "shoot_sniper";
 }

@@ -93,6 +93,7 @@ public sealed class GameManager : MonoBehaviour
         HasWon = won;
 
         Debug.Log(won ? "[Game] 胜利！所有波次已被守住" : "[Game] 游戏结束：核心生命归零");
+        AudioManager.PlaySfx(won ? "victory" : "defeat");
         GameEnded?.Invoke(won);
     }
 }

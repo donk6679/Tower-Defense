@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public sealed class FrostTower : TowerBase
 {
+    protected override string ShootSfxName => "shoot_frost";
+
     protected override void ConfigureProjectile(Projectile projectile)
     {
         if (!(projectile is FrostProjectile frost))

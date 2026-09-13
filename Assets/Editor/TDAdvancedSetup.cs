@@ -85,17 +85,17 @@ namespace TowerDefense.EditorTools
             Projectile gunProjectile = CreateProjectilePrefab(
                 GunProjectilePath, "Projectile", circleSprite,
                 new Color(1f, 0.85f, 0.2f, 1f),
-                0.18f, 9f, typeof(Projectile));
+                0.36f, 9f, typeof(Projectile));
 
             Projectile frostProjectile = CreateProjectilePrefab(
                 FrostProjectilePath, "FrostProjectile", circleSprite,
                 new Color(0.4f, 0.85f, 1f, 1f),
-                0.2f, 10f, typeof(FrostProjectile));
+                0.4f, 10f, typeof(FrostProjectile));
 
             Projectile sniperProjectile = CreateProjectilePrefab(
                 SniperProjectilePath, "SniperProjectile", circleSprite,
                 new Color(1f, 0.35f, 0.1f, 1f),
-                0.24f, 14f, typeof(Projectile));
+                0.48f, 14f, typeof(Projectile));
 
             // ---------- 炮塔 ----------
             TowerBase gunTower = CreateTowerPrefab(

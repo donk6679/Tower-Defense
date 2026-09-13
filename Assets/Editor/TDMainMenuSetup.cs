@@ -20,6 +20,7 @@ namespace TowerDefense.EditorTools
         private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
         private const string MainScenePath = "Assets/Scenes/Main.unity";
         private const string WhiteSpritePath = "Assets/Sprites/UI/white.png";
+        private const string MenuImagePath = "Assets/Sprites/UI/main_menu.png";
 
         [MenuItem("Tools/Tower Defense/Setup Main Menu & Build Settings", priority = 7)]
         public static void SetupMainMenu()
@@ -38,8 +39,16 @@ namespace TowerDefense.EditorTools
 
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            EnsureSpriteImport(MenuImagePath);
+            Sprite menuSprite = AssetDatabase.LoadAssetAtPath<Sprite>(MenuImagePath);
+            if (menuSprite == null)
+            {
+                ShowError("找不到主菜单图片", "请确认存在 " + MenuImagePath);
+                return;
+            }
+
             Sprite whiteSprite = EnsureWhiteSprite();
-            CreateMenuUI(whiteSprite);
+            CreateMenuUI(whiteSprite, menuSprite);
             CreateMainCamera();
             EnsureEventSystemExists();
 
@@ -54,12 +63,13 @@ namespace TowerDefense.EditorTools
             EditorUtility.DisplayDialog(
                 "TD Main Menu",
                 "主菜单已创建并保存到 Assets/Scenes/MainMenu.unity。\n\n" +
-                "Build Settings 已把 MainMenu 设为第 1 个场景，Main 为第 2 个。\n\n" +
-                "在编辑器里打开 MainMenu 场景并按 Play 即可测试主菜单。",
+                "背景使用 Assets/Sprites/UI/main_menu.png，\n" +
+                "开始游戏 / 退出游戏的透明点击区域已对齐图片按钮。\n\n" +
+                "Build Settings 已把 MainMenu 设为第 1 个场景，Main 为第 2 个。",
                 "OK");
         }
 
-        private static void CreateMenuUI(Sprite whiteSprite)
+        private static void CreateMenuUI(Sprite whiteSprite, Sprite menuSprite)
         {
             GameObject uiRoot = new GameObject("UI", typeof(RectTransform));
             RectTransform canvasRect = (RectTransform)uiRoot.transform;
@@ -74,12 +84,12 @@ namespace TowerDefense.EditorTools
 
             CanvasScaler scaler = uiRoot.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(2848f, 1600f);
             scaler.matchWidthOrHeight = 0.5f;
 
             uiRoot.AddComponent<GraphicRaycaster>();
 
-            // 深色背景
+            // 主菜单整图背景
             RectTransform background = CreateRect(uiRoot.transform, "Background");
             background.anchorMin = Vector2.zero;
             background.anchorMax = Vector2.one;
@@ -87,37 +97,59 @@ namespace TowerDefense.EditorTools
             background.offsetMax = Vector2.zero;
 
             Image backgroundImage = background.gameObject.AddComponent<Image>();
-            backgroundImage.sprite = whiteSprite;
-            backgroundImage.color = new Color(0.04f, 0.08f, 0.13f, 1f);
+            backgroundImage.sprite = menuSprite;
+            backgroundImage.color = Color.white;
+            backgroundImage.preserveAspect = false;
+            backgroundImage.raycastTarget = false;
 
-            // 标题与副标题
-            CreateScreenText(
-                uiRoot.transform, "Title", "TOWER DEFENSE",
-                104, new Color(1f, 0.85f, 0.35f),
-                new Vector2(0.5f, 0.62f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(1400f, 160f), TextAnchor.MiddleCenter);
-
-            CreateScreenText(
-                uiRoot.transform, "Subtitle", "Protect the core. Survive all 8 waves.",
-                38, new Color(0.75f, 0.85f, 1f),
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(1200f, 60f), TextAnchor.MiddleCenter);
-
-            // 按钮
+            // 透明点击区域，对齐图片里的两个按钮
             uiRoot.AddComponent<MainMenuUI>();
 
-            Button startButton = CreateButton(
-                uiRoot.transform, "StartButton", "START GAME",
-                whiteSprite, 46, new Color(0.12f, 0.55f, 0.3f, 1f),
-                new Vector2(0.5f, 0.35f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(420f, 110f));
+            CreateInvisibleButton(
+                background, "StartButton", whiteSprite,
+                new Vector2(0.5f, 0.24375f), new Vector2(560f, 260f));
 
-            Button exitButton = CreateButton(
-                uiRoot.transform, "ExitButton", "EXIT",
-                whiteSprite, 40, new Color(0.45f, 0.2f, 0.2f, 1f),
-                new Vector2(0.5f, 0.23f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(320f, 90f));
+            CreateInvisibleButton(
+                background, "ExitButton", whiteSprite,
+                new Vector2(0.4993f, 0.10625f), new Vector2(540f, 200f));
+        }
 
+        private static Button CreateInvisibleButton(
+            Transform parent,
+            string name,
+            Sprite sprite,
+            Vector2 anchor,
+            Vector2 size)
+        {
+            RectTransform rect = CreateRect(parent, name);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = size;
+
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = new Color(1f, 1f, 1f, 0f);
+            image.raycastTarget = true;
+
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            return button;
+        }
+
+        private static void EnsureSpriteImport(string path)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+                return;
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 100f;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
         }
 
         private static void CreateMainCamera()
@@ -130,7 +162,7 @@ namespace TowerDefense.EditorTools
             camera.orthographic = true;
             camera.orthographicSize = 5f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.04f, 0.08f, 0.13f, 1f);
+            camera.backgroundColor = new Color(0.59f, 0.79f, 0.14f, 1f);
 
             cameraObject.AddComponent<AudioListener>();
         }

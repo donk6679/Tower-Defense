@@ -97,7 +97,7 @@ namespace TowerDefense.EditorTools
                 AssetDatabase.DeleteAsset(ProjectilePrefabPath);
 
             GameObject temp = new GameObject("Projectile");
-            temp.transform.localScale = Vector3.one * 0.18f;
+            temp.transform.localScale = Vector3.one * 0.36f;
 
             SpriteRenderer renderer = temp.AddComponent<SpriteRenderer>();
             renderer.sprite = circleSprite;
