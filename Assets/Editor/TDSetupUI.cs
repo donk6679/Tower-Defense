@@ -33,6 +33,20 @@ namespace TowerDefense.EditorTools
             if (TDMenuGuard.IsInPlayMode())
                 return;
 
+            if (AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/GameUI.prefab") != null)
+            {
+                bool proceed = EditorUtility.DisplayDialog(
+                    "UI 已 Prefab 化",
+                    "项目已把 UI 固化为 Assets/Prefabs/GameUI.prefab。\n\n" +
+                    "继续重建会新建一套 UI，并破坏与 Prefab 的关联。\n" +
+                    "建议直接编辑 Prefab。\n\n确定要继续重建吗？",
+                    "继续重建",
+                    "取消");
+
+                if (!proceed)
+                    return;
+            }
+
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
