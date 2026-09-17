@@ -14,20 +14,30 @@ public sealed class WaveSettings
     [SerializeField, Min(0f)] private float delayBeforeWave = 1.5f;
     [SerializeField, Min(0f)] private float delayAfterWave = 2f;
 
+    [Header("Enemy Stats")]
+    [Tooltip("本波敌人的血量倍率。1 = 使用 Prefab 基础血量。")]
+    [SerializeField, Min(0.1f)] private float healthMultiplier = 1f;
+
     public WaveSettings()
     {
     }
 
-    public WaveSettings(EnemyGroup[] enemyGroups, float beforeDelay, float afterDelay)
+    public WaveSettings(
+        EnemyGroup[] enemyGroups,
+        float beforeDelay,
+        float afterDelay,
+        float healthMultiplierValue = 1f)
     {
         groups = enemyGroups == null ? new EnemyGroup[0] : enemyGroups;
         delayBeforeWave = beforeDelay;
         delayAfterWave = afterDelay;
+        healthMultiplier = Mathf.Max(0.1f, healthMultiplierValue);
     }
 
     public EnemyGroup[] Groups => groups;
     public float DelayBeforeWave => delayBeforeWave;
     public float DelayAfterWave => delayAfterWave;
+    public float HealthMultiplier => healthMultiplier;
 }
 
 /// <summary>

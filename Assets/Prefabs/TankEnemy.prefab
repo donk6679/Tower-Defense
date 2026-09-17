@@ -97,8 +97,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e309f066547e8984bb4b7579ee2e2b1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 1.2
-  maxHealth: 45
+  moveSpeed: 2
+  maxHealth: 100
   goldReward: 15
   slowTint: {r: 0.3, g: 0.8, b: 1, a: 1}
   walkFrames:

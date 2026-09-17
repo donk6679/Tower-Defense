@@ -99,14 +99,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: Frost Tower
   levelStats:
-  - range: 2.5
-    damage: 3
+  - range: 3.5
+    damage: 5
     fireRate: 1.5
     slowSpeedMultiplier: 0.6
     slowDuration: 2
     upgradeCost: 0
-  - range: 2.5
-    damage: 3
+  - range: 3.5
+    damage: 5
     fireRate: 1.5
     slowSpeedMultiplier: 0.45
     slowDuration: 3
@@ -117,7 +117,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: d7db158766e4b5d4891ba6ef6fd85583, type: 3}
   - {fileID: 21300000, guid: c39824d636e0d2f45bc63c89efa36340, type: 3}
   range: 2.6
-  damage: 2
+  damage: 5
   fireRate: 1.5
   projectilePrefab: {fileID: 8099999097000415077, guid: 0964d471c6d96bd44bdaa1d4c06ba75d, type: 3}
   firePoint: {fileID: 0}

@@ -17,6 +17,10 @@ public sealed class WaveManager : MonoBehaviour
     [Header("Wave Config")]
     [SerializeField] private WaveSettings[] waves = new WaveSettings[0];
 
+    [Header("Enemy Health Growth")]
+    [Tooltip("每往后一波，敌人基础血量额外增加的倍率。\n最终倍率 = 该波 Health Multiplier + 本值 × (波数 - 1)。")]
+    [SerializeField, Min(0f)] private float healthGrowthPerWave = 0.15f;
+
     [Header("Auto Start Timing")]
     [SerializeField, Min(0f)] private float firstWaveDelay = 1.5f;
     [SerializeField, Min(0.5f)] private float nextWaveAutoDelay = 10f;
@@ -37,6 +41,7 @@ public sealed class WaveManager : MonoBehaviour
     public int EnemiesAlive => enemiesAlive;
     public int CurrentWaveNumber => currentWaveNumber;
     public int TotalWaveCount => waves == null ? 0 : waves.Length;
+    public float HealthGrowthPerWave => healthGrowthPerWave;
     public int NextWaveNumber => nextWaveNumber;
     public float IntermissionRemaining => Mathf.Max(0f, intermissionRemaining);
     public float IntermissionTotal => Mathf.Max(0.01f, intermissionTotal);
@@ -162,7 +167,11 @@ public sealed class WaveManager : MonoBehaviour
         WaveSettings wave = waves[waveNumber - 1];
         int total = TotalWaveCount;
 
-        Debug.Log("[Wave] 第 " + waveNumber + "/" + total + " 波开始生成");
+        float waveHealthMultiplier =
+            wave.HealthMultiplier + healthGrowthPerWave * (waveNumber - 1);
+
+        Debug.Log("[Wave] 第 " + waveNumber + "/" + total +
+                  " 波开始生成，血量倍率 ×" + waveHealthMultiplier.ToString("0.00"));
         AudioManager.PlaySfx("wave_start");
 
         if (IsGameOver())
@@ -185,7 +194,7 @@ public sealed class WaveManager : MonoBehaviour
                     yield break;
                 }
 
-                SpawnEnemy(group.EnemyPrefab);
+                SpawnEnemy(group.EnemyPrefab, waveHealthMultiplier);
 
                 if (spawned < group.Count - 1)
                     yield return new WaitForSeconds(group.SpawnInterval);
@@ -228,12 +237,16 @@ public sealed class WaveManager : MonoBehaviour
         spawningWave = false;
     }
 
-    private void SpawnEnemy(Enemy enemyPrefab)
+    private void SpawnEnemy(Enemy enemyPrefab, float healthMultiplier)
     {
+        int health = Mathf.Max(
+            1,
+            Mathf.RoundToInt(enemyPrefab.MaxHealth * healthMultiplier));
+
         Enemy enemy = Instantiate(enemyPrefab, pathManager.SpawnPosition, Quaternion.identity);
         enemiesAlive++;
 
-        enemy.Initialize(pathManager);
+        enemy.Initialize(pathManager, health);
         enemy.Died += HandleEnemyDied;
         enemy.ReachedBase += HandleEnemyReachedBase;
     }

@@ -195,18 +195,9 @@ public class TowerBase : MonoBehaviour
     /// </summary>
     private void AcquireTarget()
     {
-        if (currentTarget != null && !currentTarget.IsDead && IsInRange(currentTarget))
-            return;
-
+        // 每帧重新评估：永远锁定路径进度最大的敌人，
+        // 即使当前目标仍存活，只要有敌人跑到更前面就会切换过去。
         currentTarget = FindTarget();
-    }
-
-    private bool IsInRange(Enemy enemy)
-    {
-        if (enemy == null)
-            return false;
-
-        return Vector3.Distance(transform.position, enemy.transform.position) <= Range;
     }
 
     private void AimAtCurrentTarget()
@@ -244,8 +235,8 @@ public class TowerBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 优先选择“路径进度最大”（最接近终点）的敌人；
-    /// 进度相同时选择距离更近的。
+    /// 永远选择“路径进度最大”（最接近终点）的敌人；
+    /// 进度相同时选择距离炮塔更近的。
     /// </summary>
     private Enemy FindTarget()
     {

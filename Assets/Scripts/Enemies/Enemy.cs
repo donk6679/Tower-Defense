@@ -53,6 +53,18 @@ public sealed class Enemy : MonoBehaviour
     /// <summary>当前目标路径点索引，用于炮塔判断哪个敌人最接近终点。</summary>
     public int WaypointProgress => nextWaypointIndex;
 
+    /// <summary>当前到核心（路径终点）的距离，炮塔用它判断威胁优先级。</summary>
+    public float DistanceToBase
+    {
+        get
+        {
+            if (pathManager == null)
+                return float.MaxValue;
+
+            return Vector3.Distance(transform.position, pathManager.BasePosition);
+        }
+    }
+
     /// <summary>敌人到达核心（此时 WaveManager 会通知 GameManager 扣生命）。</summary>
     public event Action<Enemy> ReachedBase;
 
@@ -81,12 +93,17 @@ public sealed class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 绑定路径。出生位置为路径第一个点，因此从第二个路径点开始前进。
+    /// 绑定路径，并可选覆盖最大生命值（用于波次血量成长）。
+    /// 出生位置为路径第一个点，因此从第二个路径点开始前进。
     /// </summary>
-    public void Initialize(PathManager path)
+    public void Initialize(PathManager path, int healthOverride = -1)
     {
         pathManager = path;
         nextWaypointIndex = 1;
+
+        if (healthOverride > 0)
+            maxHealth = Mathf.Max(1, healthOverride);
+
         currentHealth = maxHealth;
     }
 
