@@ -53,33 +53,6 @@ public sealed class BuildManager : MonoBehaviour
         Instance = this;
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.X))
-        {
-            ToggleDemolishMode();
-            return;
-        }
-
-        if (towerTypes == null || towerTypes.Length == 0)
-            return;
-
-        if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Escape))
-        {
-            ClearSelection();
-            if (demolishMode)
-                SetDemolishMode(false);
-            return;
-        }
-
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-            SelectTower(0);
-        if (towerTypes.Length > 1 && Input.GetKeyDown(KeyCode.Alpha2))
-            SelectTower(1);
-        if (towerTypes.Length > 2 && Input.GetKeyDown(KeyCode.Alpha3))
-            SelectTower(2);
-    }
-
     public void SetAvailableTowers(TowerTypeConfig[] types)
     {
         towerTypes = types == null ? new TowerTypeConfig[0] : types;
@@ -154,6 +127,18 @@ public sealed class BuildManager : MonoBehaviour
     {
         if (selectedUpgradeTower != null)
             ShowSelectedRangePreview(selectedUpgradeTower);
+    }
+
+    /// <summary>点击已有炮塔时显示它的攻击范围。</summary>
+    public void ShowTowerRange(TowerBase tower)
+    {
+        ShowSelectedRangePreview(tower);
+    }
+
+    /// <summary>关闭炮塔菜单时隐藏攻击范围。</summary>
+    public void HideTowerRange()
+    {
+        HideSelectedRangePreview();
     }
 
     private void RefreshBuildRangePreview()

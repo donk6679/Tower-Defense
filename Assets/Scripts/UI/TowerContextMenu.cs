@@ -112,9 +112,16 @@ public sealed class TowerContextMenu : MonoBehaviour
         ClearChildren();
 
         if (slot.IsOccupied && slot.HasTower)
+        {
             AddTowerActions(slot);
+            // 点击已有炮塔时同时显示它的攻击范围
+            buildManager.ShowTowerRange(slot.PlacedTower);
+        }
         else if (!slot.IsOccupied)
+        {
+            buildManager.HideTowerRange();
             AddTowerBuildOptions(slot);
+        }
         else
         {
             Hide();
@@ -130,6 +137,9 @@ public sealed class TowerContextMenu : MonoBehaviour
     {
         activeSlot = null;
         ClearChildren();
+
+        if (buildManager != null)
+            buildManager.HideTowerRange();
 
         if (menuRect != null)
             menuRect.gameObject.SetActive(false);
