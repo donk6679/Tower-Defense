@@ -130,7 +130,7 @@ Assets/
 
 ## 作者
 
-- 作者：<你的名字>
-- GitHub：<你的主页链接>
+- 作者：donk6679
+- GitHub: (https://github.com/donk6679)
 
 如果这个项目对你有帮助，欢迎点一个 Star。
